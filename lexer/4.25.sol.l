@@ -1,6 +1,7 @@
 %{
   #include <iostream>
   using namespace std;
+  extern int yylex();
   enum Tokens {
     SEMICOLON = 258,
     PRAGMA = 259,
@@ -56,5 +57,12 @@ internal                                     { cout << INTERNAL << endl; }
 [ \t\n]                                      { /* Do nothing */ }
 %%
 int main(int argc, char** argv) {
-  yylex();
+  argc--, argv++;
+  if (argc != 1) {
+    cout << "One argument was expected but " << argc << " were provided" << endl;
+    return 1;
+  }
+  FILE *input = fopen(*argv, "r");
+  yyin = input;
+  while(yylex());
 }
