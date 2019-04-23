@@ -3,58 +3,67 @@
   using namespace std;
   extern int yylex();
   enum Tokens {
+    /* Miscallaneous */ 
     SEMICOLON = 258,
-    PRAGMA = 259,
-    SOLIDITY = 260,
-    VERSION = 261,
-    DECIMAL = 262,
-    HEX = 263,
-    IDENTIFIER = 264,
-    IMPORT = 265,
-    CONTRACT = 266,
-    LIBRARY = 267,
-    INTERFACE = 268,
-    IS = 269,
-    AS = 270,
-    FROM = 271,
-    COMMA = 272,
-    LEFT_PAREN = 273,
-    RIGHT_PAREN = 274,
-    LEFT_BRACE = 275,
-    RIGHT_BRACE = 276,
-    LEFT_BRACKET = 277,
-    RIGHT_BRACKET = 278,
+    IDENTIFIER = 259,
+    RIGHT_BRACE = 260,
+    LEFT_BRACE = 261,
+    RIGHT_BRACKET = 262,
+    LEFT_BRACKET = 263,
+    RIGHT_PAREN = 264,
+    LEFT_PAREN = 265,
+    EQUAL = 266,
+    ASTERISK = 267,
+    /* Pragma Directive Lexemes */
+    PRAGMA = 268,
+    VERSION = 269,    
+    /* Import Directive Lexemes */
+    IMPORT = 270,
+    /* TODO: Verify that this works correctly */
+    STRING_LITERAL = 271,
+    AS = 272,
+    FROM = 273,
+    COMMA = 274,
+    /* Contract Definition Lexemes */
+    CONTRACT = 275,
+    LIBRARY = 276,
+    INTERFACE = 277,
+    IS = 278,
+    /* State Variable Declaration Lexemes */
     PUBLIC = 279,
-    PRIVATE = 280,
-    EXTERNAL = 281,
-    INTERNAL = 282,
+    INTERNAL = 280,
+    PRIVATE = 281,
+    CONSTANT = 282,
   };
 %}
 %%
-pragma                                       { cout << PRAGMA << endl; }
-solidity                                     { cout << SOLIDITY << endl; }
-import                                       { cout << IMPORT << endl; } 
-contract                                     { cout << CONTRACT << endl; }
-library                                      { cout << LIBRARY << endl; }
-interface                                    { cout << INTERFACE << endl; }
-is                                           { cout << IS << endl; }
-public                                       { cout << PUBLIC << endl; }
-private                                      { cout << PRIVATE << endl; }
-external                                     { cout << EXTERNAL << endl; }
-internal                                     { cout << INTERNAL << endl; }
-\(                                           { cout << LEFT_PAREN << endl; }
-\)                                           { cout << RIGHT_PAREN << endl; }
-\{                                           { cout << LEFT_BRACE << endl; }
-\}                                           { cout << RIGHT_BRACE << endl; }
-\[                                           { cout << LEFT_BRACKET << endl; }
-\]                                           { cout << RIGHT_BRACKET << endl; }
-\,                                           { cout << COMMA << endl; }
-\^[0-9]+\.[0-9]+\.[0-9]+                     { cout << VERSION << ": " << yytext << endl; }
-;                                            { cout << SEMICOLON << endl; }
-[a-zA-Z_$][a-zA-Z_$0-9]*                     { cout << IDENTIFIER << ": " << yytext << endl; }
-[0-9]+(\.[0-9]*)?([eE][0-9]+)?               { cout << DECIMAL << ": " << yytext << endl; }
-0x[0-9a-fA-F]+                               { cout << HEX << ": " << yytext << endl; }
-[ \t\n]                                      { /* Do nothing */ }
+pragma                        { cout << PRAGMA << endl; }
+import                        { cout << IMPORT << endl; }
+as                            { cout << AS << endl; }
+from                          { cout << FROM << endl; }
+contract                      { cout << CONTRACT << endl; }
+library                       { cout << LIBRARY << endl; }
+interface                     { cout << INTERFACE << endl; }
+is                            { cout << IS << endl; }
+public                        { cout << PUBLIC << endl; }
+internal                      { cout << INTERNAL << endl; }
+private                       { cout << PRIVATE << endl; }
+constant                      { cout << CONSTANT << endl; }
+,                             { cout << COMMA << endl; }
+;                             { cout << SEMICOLON << endl; }
+\*                            { cout << ASTERISK << endl; }
+\"([^\"\r\n\\]|'\\'.)*\"      { cout << STRING_LITERAL << ": " << yytext << endl; }
+[a-zA-Z_$][a-zA-Z_$0-9]*      { cout << IDENTIFIER << ": " << yytext << endl; }
+=                             { cout << EQUAL << endl; }
+\{                            { cout << RIGHT_BRACE << endl; } 
+\}                            { cout << LEFT_BRACE << endl; }
+\[                            { cout << RIGHT_BRACKET << endl; }
+\]                            { cout << LEFT_BRACKET << endl; }
+\(                            { cout << RIGHT_PAREN << endl; }
+\)                            { cout << LEFT_PAREN << endl; }
+[ \t]                         { /* Do nothing */ }
+\n                            { /* Do nothing */ }
+[^;a-zA-Z \t\n]+              { cout << VERSION << ": " << yytext << endl; } 
 %%
 int main(int argc, char** argv) {
   argc--, argv++;
