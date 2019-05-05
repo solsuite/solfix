@@ -68,10 +68,32 @@
     /* While Statement Lexemes */
     WHILE = 304,
     /* Placeholder Statement Lexemes */
-    UNDERSCORE = 305
+    UNDERSCORE = 305,
+    /* Inline Assembly Statement Lexemes */
+    ASSEMBLY = 306,
+    /* Do While Statement Lexemes */
+    DO = 307, 
+    /* Continue Lexemes */
+    CONTINUE = 308,
+    /* Break Lexemes */
+    BREAK = 309,
+    /* Return Lexemes */
+    RETURN = 310,
+    /* Throw Lexemes */
+    THROW = 311,
+    /* Emit Lexemes */
+    EMIT = 312,
+    /* Variable Declaration Lexemes */
+    VAR = 313,
+    /* Expression Lexemes */
+    INCREMENT = 314,
+    DECREMENT = 315,
+    NOT = 316,
+    COMPLEMENT = 317,
   };
 %}
 %%
+assembly                      { cout << ASSEMBLY << endl; }
 pragma                        { cout << PRAGMA << endl; }
 import                        { cout << IMPORT << endl; }
 as                            { cout << AS << endl; }
@@ -100,6 +122,17 @@ payable                       { cout << PAYABLE << endl; }
 if                            { cout << IF << endl; }
 else                          { cout << ELSE << endl; }
 while                         { cout << WHILE << endl; }
+do                            { cout << DO << endl; }
+continue                      { cout << CONTINUE << endl; }
+break                         { cout << BREAK << endl; }
+return                        { cout << RETURN << endl; }
+throw                         { cout << THROW << endl; }
+emit                          { cout << EMIT << endl; }
+var                           { cout << VAR << endl; }
+\+\+                          { cout << INCREMENT << endl; }
+--                            { cout << DECREMENT << endl; }
+!                             { cout << NOT << endl; }
+~                             { cout << COMPLEMENT << endl; }
 =>                            { cout << ARROW << endl; }
 \.                            { cout << PERIOD << endl; }
 ,                             { cout << COMMA << endl; }
