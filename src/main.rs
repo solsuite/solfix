@@ -15,62 +15,6 @@ struct ParseNode {
     children: Vec<Box<ParseNode>>
 }
 
-#[derive(PartialEq)]
-enum Level {
-    Top,
-    Pragma(u8),
-    Import(u8, u8),
-    Contract(u8),
-    ContractPart,
-    InheritanceSpecifier(u8),
-    UserDefinedTypeName,
-    Expression,
-}
-
-impl Level {
-    fn is_contract(&self) -> bool {
-        match self {
-            Level::Contract(..) => true,
-            _ => false
-        }
-    }
-
-    fn is_contract_part(&self) -> bool {
-        match self {
-            Level::ContractPart => true,
-            _ => false
-        }
-    }
-
-    fn is_import(&self) -> bool {
-        match self {
-            Level::Import(..) => true,
-            _ => false
-        }
-    }
-
-    fn is_inheritance_specifier(&self) -> bool {
-        match self {
-            Level::InheritanceSpecifier(..) => true,
-            _ => false
-        }
-    }
-
-    fn is_pragma(&self) -> bool {
-        match self {
-            Level::Pragma(..) => true,
-            _ => false
-        }
-    }
-
-    fn is_top(&self) -> bool {
-        match self {
-            Level::Top => true,
-            _ => false
-        }
-    }
-}
-
 fn parse_pragma(chars: &Vec<char>, cur: &mut usize, node: &mut ParseNode, tree: &mut ParseTree) { 
     let mut next = lex_4_25::next_token(chars, cur);
     match next {
@@ -94,18 +38,87 @@ fn parse_pragma(chars: &Vec<char>, cur: &mut usize, node: &mut ParseNode, tree: 
     }
     next = lex_4_25::next_token(&chars, cur);
     match next {
-        lex_4_25::Token::Semicolon => {
-            tree.children.push((*node).clone());
-        }
+        lex_4_25::Token::Semicolon => tree.children.push((*node).clone()), 
         _ => panic!("Invalid pragma declaration")
     }
 } 
 
 fn parse_import(chars: &Vec<char>, cur: &mut usize, node: &mut ParseNode, tree: &mut ParseTree) { }
 
-fn parse_contract(chars: &Vec<char>, cur: &mut usize, node: &mut ParseNode, tree: &mut ParseTree) { }
+fn parse_contract(chars: &Vec<char>, cur: &mut usize, node: &mut ParseNode, tree: &mut ParseTree) { 
+    let mut next = lex_4_25::next_token(&chars, cur);
+    match next {
+        id@lex_4_25::Token::Identifier(..) => node.children.push(Box::new(ParseNode{ node: id, children: vec![]})),
+        _ => panic!("Invalid contract definition")
+    }
+    next = lex_4_25::next_token(&chars, cur);
+    match next {
+        lex_4_25::Token::Is => { 
+            node.children.push(Box::new(ParseNode{ node: lex_4_25::Token::Is, children: vec![] }));
+            parse_inheritance_specifier(chars, cur, node, tree);
+        }
+        lex_4_25::Token::OpenBrace => (),
+        _ => panic!("Invalid contract definition")
+    }
+    parse_contract_part(chars, cur, node, tree);
+    tree.children.push((*node).clone());
+}
 
-fn parse_contract_part(chars: &Vec<char>, cur: &mut usize, node: &mut ParseNode, tree: &mut ParseTree) { }
+/*** Contract Part ***/
+
+fn parse_contract_part(chars: &Vec<char>, cur: &mut usize, node: &mut ParseNode, tree: &mut ParseTree) {
+    let mut next = lex_4_25::next_token(&chars, cur);
+    match next {
+        lex_4_25::Token::Using => {
+            node.children.push(Box::new(ParseNode{ node: lex_4_25::Token::Using, children: vec![] }));
+            parse_using_for_declaration(chars, cur, node, tree);
+        }
+        lex_4_25::Token::Struct => {
+            node.children.push(Box::new(ParseNode{ node: lex_4_25::Token::Struct, children: vec![] }));
+            parse_struct_definition(chars, cur, node, tree);
+        }
+        lex_4_25::Token::Modifier => {
+            node.children.push(Box::new(ParseNode{ node: lex_4_25::Token::Modifier, children: vec![] }));
+            parse_modifier_definition(chars, cur, node, tree);
+        }
+        lex_4_25::Token::Function => {
+            node.children.push(Box::new(ParseNode{ node: lex_4_25::Token::Function, children: vec![] }));
+            parse_function_definition(chars, cur, node, tree);
+        }
+        lex_4_25::Token::Event => {
+            node.children.push(Box::new(ParseNode{ node: lex_4_25::Token::Event, children: vec![] }));
+            parse_event_definition(chars, cur, node, tree);
+        }
+        lex_4_25::Token::Enum => {
+            node.children.push(Box::new(ParseNode{ node: lex_4_25::Token::Enum, children: vec![] }));
+            parse_enum_definition(chars, cur, node, tree);
+        }
+        matched => parse_state_variable_declaration(matched, chars, cur, node, tree)
+    }
+}
+
+fn parse_state_variable_declaration(chars: &Vec<char>, cur: &mut usize, node: &mut ParseNode, tree: &mut ParseTree, first: lex_4_25::Token) { 
+    parse_type_name(chars, cur, node, tree, first);
+    let mut next = lex_4_25::next_token(&chars, cur);
+}
+
+fn parse_type_name(chars: &Vec<char>, cur: &mut usize, node: &mut ParseNode, tree: &mut ParseTree, first: lex_4_25::Token) { }
+
+fn parse_using_for_declaration(chars: &Vec<char>, cur: &mut usize, node: &mut ParseNode, tree: &mut ParseTree) { }
+
+fn parse_struct_definition(chars: &Vec<char>, cur: &mut usize, node: &mut ParseNode, tree: &mut ParseTree) { }
+
+fn parse_modifier_definition(chars: &Vec<char>, cur: &mut usize, node: &mut ParseNode, tree: &mut ParseTree) { }
+
+fn parse_function_definition(chars: &Vec<char>, cur: &mut usize, node: &mut ParseNode, tree: &mut ParseTree) { }
+
+fn parse_event_definition(chars: &Vec<char>, cur: &mut usize, node: &mut ParseNode, tree: &mut ParseTree) { }
+
+fn parse_enum_definition(chars: &Vec<char>, cur: &mut usize, node: &mut ParseNode, tree: &mut ParseTree) { 
+    
+}
+
+/*** Inheritance Specifier ***/ 
 
 fn parse_inheritance_specifier(chars: &Vec<char>, cur: &mut usize, node: &mut ParseNode, tree: &mut ParseTree) { }
 
@@ -130,15 +143,15 @@ fn parse(input: String) -> ParseTree {
             }
             lex_4_25::Token::Contract => {
                 current_node.node = lex_4_25::Token::Contract;
-                // TODO
+                parse_contract(&input_chars, &mut cur, current_node, &mut tree);
             }
             lex_4_25::Token::Library => {
                 current_node.node = lex_4_25::Token::Library;
-                // TODO
+                parse_contract(&input_chars, &mut cur, current_node, &mut tree);
             }
             lex_4_25::Token::Interface => {
                 current_node.node = lex_4_25::Token::Interface;
-                // TODO
+                parse_contract(&input_chars, &mut cur, current_node, &mut tree);
             }
             _ => {
                 // TODO: Add the below when everything is implemented
