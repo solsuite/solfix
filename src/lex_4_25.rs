@@ -189,22 +189,31 @@ pub fn next_token(line: &Vec<char>, cur: &mut usize) -> Token {
     while *cur < line.len() {
         if collected.len() == 0 {
             if line[*cur] == ';' {
+                *cur += 1;
                 return Token::Semicolon;
             } else if line[*cur] == '{' {
+                *cur += 1;
                 return Token::OpenBrace;
             } else if line[*cur] == '}' {
+                *cur += 1;
                 return Token::CloseBrace;
             } else if line[*cur] == '(' {
+                *cur += 1;
                 return Token::OpenParenthesis;
             } else if line[*cur] == ')' {
+                *cur += 1;
                 return Token::CloseParenthesis;
             } else if line[*cur] == '[' {
+                *cur += 1;
                 return Token::OpenBracket;
             } else if line[*cur] == ']' {
+                *cur += 1;
                 return Token::CloseBracket;
             } else if line[*cur] == ',' {
+                *cur += 1;
                 return Token::Comma;
             } else if line[*cur] == ':' {
+                *cur += 1;
                 return Token::Colon;
             } else if !line[*cur].is_whitespace() {
                 collected.push(line[*cur]);
@@ -222,7 +231,6 @@ pub fn next_token(line: &Vec<char>, cur: &mut usize) -> Token {
                line[*cur] == ',' ||
                line[*cur] == ':'
             {
-                *cur -= 1;
                 return match collected.as_ref() {
                     "address" => Token::Address,
                     "anonymous" => Token::Anonymous, 
