@@ -51,7 +51,7 @@ pub enum Token {
     Continue,
     Contract,
     Days,
-    DecimalLiteral(String),
+    DecimalNumber(String),
     Delete,
     Do,
     Else,
@@ -59,6 +59,7 @@ pub enum Token {
     Enum,
     Ether,
     Event,
+    Exclamation,
     External,
     False,
     Finney,
@@ -68,6 +69,7 @@ pub enum Token {
     Function,
     Hex,
     HexLiteral(String),
+    HexNumber(String),
     Hours,
     Identifier(String),
     If,
@@ -113,6 +115,7 @@ pub enum Token {
     Library, 
     Mapping,
     Memory,
+    Minus,
     Minutes,
     Modifier,
     New,
@@ -122,6 +125,7 @@ pub enum Token {
     OpenParenthesis,
     Payable,
     Placeholder,
+    Plus,
     Pragma,
     Private,
     Public,
@@ -135,6 +139,7 @@ pub enum Token {
     Struct,
     Szabo,
     Throw,
+    Tilda,
     True,
     Ufixed,
     Uint,
@@ -180,9 +185,28 @@ pub enum Token {
     Years,
 }
 
+impl Token {
+    pub fn is_number_unit(&self) -> bool {
+        return match self {
+            Token::Days => true,
+            Token::Ether => true,
+            Token::Finney => true,
+            Token::Hours => true,
+            Token::Minutes => true,
+            Token::Seconds => true,
+            Token::Szabo => true,
+            Token::Weeks => true,
+            Token::Wei => true,
+            Token::Years => true,
+            _ => false
+        }
+    }
+}
+
 pub fn next_token(line: &Vec<char>, cur: &mut usize) -> Token {
     let id_re = Regex::new(r"^[a-zA-Z\$_][a-zA-Z0-9\$_]*$").unwrap();
     let hex_re = Regex::new(r"^0x[0-9a-fA-F]*$").unwrap();
+    let hex_literal_re = Regex::new(r#"^hex(\\"([0-9a-fA-F]{2})*\\"|'([0-9a-fA-F]{2})*')$"#).unwrap();
     let decimal_re = Regex::new(r"^[0-9]+(\.[0-9]*)?([eE][0-9]+)?$").unwrap();
     let version_re = Regex::new(r"^\^?[0-9]+\.[0-9]+\.[0-9]+").unwrap();
     let mut collected = String::new();
@@ -215,6 +239,18 @@ pub fn next_token(line: &Vec<char>, cur: &mut usize) -> Token {
             } else if line[*cur] == ':' {
                 *cur += 1;
                 return Token::Colon;
+            } else if line[*cur] == '!' {
+                *cur += 1;
+                return Token::Exclamation;
+            } else if line[*cur] == '~' {
+                *cur += 1;
+                return Token::Tilda;
+            } else if line[*cur] == '+' {
+                *cur += 1;
+                return Token::Plus;
+            } else if line[*cur] == '-' {
+                *cur += 1;
+                return Token::Minus;
             } else if !line[*cur].is_whitespace() {
                 collected.push(line[*cur]);
             }
@@ -229,7 +265,11 @@ pub fn next_token(line: &Vec<char>, cur: &mut usize) -> Token {
                line[*cur] == '[' ||
                line[*cur] == ']' ||
                line[*cur] == ',' ||
-               line[*cur] == ':'
+               line[*cur] == ':' ||
+               line[*cur] == '!' ||
+               line[*cur] == '~' ||
+               line[*cur] == '+' ||
+               line[*cur] == '-'
             {
                 return match collected.as_ref() {
                     "address" => Token::Address,
@@ -395,8 +435,9 @@ pub fn next_token(line: &Vec<char>, cur: &mut usize) -> Token {
                     "years" => Token::Years,
                     "_" => Token::Placeholder,
                     id if id_re.is_match(id) => Token::Identifier(id.to_string()),
-                    hex if hex_re.is_match(hex) => Token::HexLiteral(hex.to_string()),
-                    num if decimal_re.is_match(num) => Token::DecimalLiteral(num.to_string()),
+                    hex if hex_re.is_match(hex) => Token::HexNumber(hex.to_string()),
+                    num if decimal_re.is_match(num) => Token::DecimalNumber(num.to_string()),
+                    hex if hex_literal_re.is_match(hex) => Token::HexLiteral(hex.to_string()),
                     version if version_re.is_match(version) => Token::Version(version.to_string()),
                     none => panic!("No Token Matched {}", none)
                 }
@@ -407,4 +448,11 @@ pub fn next_token(line: &Vec<char>, cur: &mut usize) -> Token {
         *cur += 1;
     }
     Token::NoMatch
+}
+
+pub fn peek_token(line: &Vec<char>, cur: &mut usize) -> Token {
+    let old = *cur;
+    let next = next_token(line, cur);
+    *cur = old;
+    next
 }
