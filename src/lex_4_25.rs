@@ -136,6 +136,7 @@ pub enum Token {
     Semicolon,
     Storage,
     String,
+    StringLiteral(String),
     Struct,
     Szabo,
     Throw,
@@ -201,13 +202,145 @@ impl Token {
             _ => false
         }
     }
+
+    pub fn is_int(&self) -> bool {
+        return match self {
+            Token::Int => true,
+            Token::Int8 => true,
+            Token::Int16 => true,
+            Token::Int24 => true,
+            Token::Int32 => true,
+            Token::Int40 => true,
+            Token::Int48 => true,
+            Token::Int56 => true,
+            Token::Int64 => true,
+            Token::Int72 => true,
+            Token::Int80 => true,
+            Token::Int88 => true,
+            Token::Int96 => true,
+            Token::Int104 => true,
+            Token::Int112 => true,
+            Token::Int120 => true,
+            Token::Int128 => true,
+            Token::Int136 => true,
+            Token::Int144 => true,
+            Token::Int152 => true,
+            Token::Int160 => true,
+            Token::Int168 => true,
+            Token::Int176 => true,
+            Token::Int184 => true,
+            Token::Int192 => true,
+            Token::Int200 => true,
+            Token::Int208 => true,
+            Token::Int216 => true,
+            Token::Int224 => true,
+            Token::Int232 => true,
+            Token::Int240 => true,
+            Token::Int248 => true,
+            Token::Int256 => true,
+            _ => false
+        }
+    }
+
+    pub fn is_uint(&self) -> bool {
+        return match self {
+            Token::Uint => true,
+            Token::Uint8 => true,
+            Token::Uint16 => true,
+            Token::Uint24 => true,
+            Token::Uint32 => true,
+            Token::Uint40 => true,
+            Token::Uint48 => true,
+            Token::Uint56 => true,
+            Token::Uint64 => true,
+            Token::Uint72 => true,
+            Token::Uint80 => true,
+            Token::Uint88 => true,
+            Token::Uint96 => true,
+            Token::Uint104 => true,
+            Token::Uint112 => true,
+            Token::Uint120 => true,
+            Token::Uint128 => true,
+            Token::Uint136 => true,
+            Token::Uint144 => true,
+            Token::Uint152 => true,
+            Token::Uint160 => true,
+            Token::Uint168 => true,
+            Token::Uint176 => true,
+            Token::Uint184 => true,
+            Token::Uint192 => true,
+            Token::Uint200 => true,
+            Token::Uint208 => true,
+            Token::Uint216 => true,
+            Token::Uint224 => true,
+            Token::Uint232 => true,
+            Token::Uint240 => true,
+            Token::Uint248 => true,
+            Token::Uint256 => true,
+            _ => false
+        }
+    }
+
+    pub fn is_byte(&self) -> bool {
+        return match self {
+            Token::Byte => true,
+            Token::Bytes => true,
+            Token::Bytes1 => true,
+            Token::Bytes2 => true,
+            Token::Bytes3 => true,
+            Token::Bytes4 => true,
+            Token::Bytes5 => true,
+            Token::Bytes6 => true,
+            Token::Bytes7 => true,
+            Token::Bytes8 => true,
+            Token::Bytes9 => true,
+            Token::Bytes10 => true,
+            Token::Bytes11 => true,
+            Token::Bytes12 => true,
+            Token::Bytes13 => true,
+            Token::Bytes14 => true,
+            Token::Bytes15 => true,
+            Token::Bytes16 => true,
+            Token::Bytes17 => true,
+            Token::Bytes18 => true,
+            Token::Bytes19 => true,
+            Token::Bytes20 => true,
+            Token::Bytes21 => true,
+            Token::Bytes22 => true,
+            Token::Bytes23 => true,
+            Token::Bytes24 => true,
+            Token::Bytes25 => true,
+            Token::Bytes26 => true,
+            Token::Bytes27 => true,
+            Token::Bytes28 => true,
+            Token::Bytes29 => true,
+            Token::Bytes30 => true,
+            Token::Bytes31 => true,
+            Token::Bytes32 => true,
+            _ => false
+        }
+    }
+
+    pub fn is_elementary_type(&self) -> bool {
+        return match self {
+            Token::Address => true,
+            Token::Bool => true,
+            Token::String => true,
+            Token::Var => true,
+            int if int.is_int() => true,
+            uint if uint.is_uint() => true,
+            byte if byte.is_byte() => true,
+            _ => false
+        }
+    }
 }
 
 pub fn next_token(line: &Vec<char>, cur: &mut usize) -> Token {
+    let decimal_re = Regex::new(r"^[0-9]+(\.[0-9]*)?([eE][0-9]+)?$").unwrap();
     let id_re = Regex::new(r"^[a-zA-Z\$_][a-zA-Z0-9\$_]*$").unwrap();
     let hex_re = Regex::new(r"^0x[0-9a-fA-F]*$").unwrap();
     let hex_literal_re = Regex::new(r#"^hex(\\"([0-9a-fA-F]{2})*\\"|'([0-9a-fA-F]{2})*')$"#).unwrap();
-    let decimal_re = Regex::new(r"^[0-9]+(\.[0-9]*)?([eE][0-9]+)?$").unwrap();
+    let string_literal_re = Regex::new(r#"^"([^"\\r\\n]|\\\\.)*"$"#).unwrap(); 
     let version_re = Regex::new(r"^\^?[0-9]+\.[0-9]+\.[0-9]+").unwrap();
     let mut collected = String::new();
     while *cur < line.len() {
@@ -438,6 +571,7 @@ pub fn next_token(line: &Vec<char>, cur: &mut usize) -> Token {
                     hex if hex_re.is_match(hex) => Token::HexNumber(hex.to_string()),
                     num if decimal_re.is_match(num) => Token::DecimalNumber(num.to_string()),
                     hex if hex_literal_re.is_match(hex) => Token::HexLiteral(hex.to_string()),
+                    string if string_literal_re.is_match(string) => Token::StringLiteral(string.to_string()),
                     version if version_re.is_match(version) => Token::Version(version.to_string()),
                     none => panic!("No Token Matched {}", none)
                 }

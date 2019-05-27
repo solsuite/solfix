@@ -143,33 +143,46 @@ fn parse_expression(chars: &Vec<char>, cur: &mut usize, node: &mut ParseNode, tr
 fn parse_simple_expression(chars: &Vec<char>, cur: &mut usize, node: &mut ParseNode, tree: &mut ParseTree) {
     let next = lex_4_25::next_token(&chars, cur);
     match next {
-        // Preceded Expression
-        lex_4_25::Token::Delete => node.add_child(lex_4_25::Token::Delete),
-        lex_4_25::Token::Exclamation => node.add_child(lex_4_25::Token::Exclamation),
-        lex_4_25::Token::Minus => node.add_child(lex_4_25::Token::Minus),
-        lex_4_25::Token::Plus => node.add_child(lex_4_25::Token::Plus),
-        lex_4_25::Token::Tilda => node.add_child(lex_4_25::Token::Tilda),
+        // Preceded Expression TODO: Add expression parsing after
+        matched @ lex_4_25::Token::Delete |
+        matched @ lex_4_25::Token::Exclamation |
+        matched @ lex_4_25::Token::Minus |
+        matched @ lex_4_25::Token::Plus |
+        matched @ lex_4_25::Token::Tilda => {
+            node.add_child(matched);
+            parse_expression(chars, cur, node, tree);
+        }
         // TODO: Add increment and decrement
         // Primary Expression
-        lex_4_25::Token::True => node.add_child(lex_4_25::Token::True),
+        boolean @ lex_4_25::Token::True | boolean @ lex_4_25::Token::False => node.add_child(boolean),
         lex_4_25::Token::False => node.add_child(lex_4_25::Token::False),
-        num@lex_4_25::Token::DecimalNumber(..) => {
+        num @ lex_4_25::Token::DecimalNumber(..) |
+        num @ lex_4_25::Token::HexNumber(..) => {
             node.add_child(num);
             let peek = lex_4_25::peek_token(&chars, cur);
             if peek.is_number_unit() {
                node.add_child(lex_4_25::next_token(&chars, cur)); 
             }
         }
-        num@lex_4_25::Token::HexNumber(..) => {
-            node.add_child(num);
-            let peek = lex_4_25::peek_token(&chars, cur);
-            if peek.is_number_unit() {
-               node.add_child(lex_4_25::next_token(&chars, cur)); 
+        num @ lex_4_25::Token::HexLiteral(..) => node.add_child(num),
+        string @ lex_4_25::Token::StringLiteral(..) => node.add_child(string),
+        open @ lex_4_25::Token::OpenParenthesis |
+        open @ lex_4_25::Token::OpenBracket => {
+            node.add_child(open);
+            parse_tuple_expression(chars, cur, node, tree);
+        }
+        id@lex_4_25::Token::Identifier(..) => node.add_child(id),
+        result => {
+            if result.is_elementary_type() {
+                node.add_child(result);
+            } else {
+                panic!()
             }
         }
-        num@lex_4_25::Token::HexLiteral(..) => node.add_child(num),
-        _ => panic!()
     }
+}
+
+fn parse_tuple_expression(chars: &Vec<char>, cur: &mut usize, node: &mut ParseNode, tree: &mut ParseTree) {
 }
 
 /*** Types ***/
