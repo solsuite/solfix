@@ -52,7 +52,9 @@ pub enum Token {
     Contract,
     Days,
     DecimalNumber(String),
+    Decrement,
     Delete,
+    Divide,
     Do,
     Else,
     Emit,
@@ -74,6 +76,7 @@ pub enum Token {
     Identifier(String),
     If,
     Import,
+    Increment,
     Indexed,
     Int,
     Int8,
@@ -113,11 +116,14 @@ pub enum Token {
     Is,
     Let,
     Library, 
+    LogicalAnd,
+    LogicalOr,
     Mapping,
     Memory,
     Minus,
     Minutes,
     Modifier,
+    Multiply,
     New,
     NoMatch,
     OpenBrace,
@@ -126,6 +132,7 @@ pub enum Token {
     Payable,
     Placeholder,
     Plus,
+    Power,
     Pragma,
     Private,
     Public,
@@ -335,13 +342,187 @@ impl Token {
     }
 }
 
-pub fn next_token(line: &Vec<char>, cur: &mut usize) -> Token {
+fn match_collected(collected: String) -> Token {
     let decimal_re = Regex::new(r"^[0-9]+(\.[0-9]*)?([eE][0-9]+)?$").unwrap();
     let id_re = Regex::new(r"^[a-zA-Z\$_][a-zA-Z0-9\$_]*$").unwrap();
     let hex_re = Regex::new(r"^0x[0-9a-fA-F]*$").unwrap();
     let hex_literal_re = Regex::new(r#"^hex(\\"([0-9a-fA-F]{2})*\\"|'([0-9a-fA-F]{2})*')$"#).unwrap();
     let string_literal_re = Regex::new(r#"^"([^"\\r\\n]|\\\\.)*"$"#).unwrap(); 
     let version_re = Regex::new(r"^\^?[0-9]+\.[0-9]+\.[0-9]+").unwrap();
+    return match collected.as_ref() {
+        "address" => Token::Address,
+        "anonymous" => Token::Anonymous, 
+        "as" => Token::As,
+        "assembly" => Token::Assembly,
+        "bool" => Token::Bool,
+        "break" => Token::Break,
+        "byte" => Token::Byte,
+        "bytes" => Token::Bytes,
+        "bytes1" => Token::Bytes1,
+        "bytes2" => Token::Bytes2,
+        "bytes3" => Token::Bytes3,
+        "bytes4" => Token::Bytes4,
+        "bytes5" => Token::Bytes5,
+        "bytes6" => Token::Bytes6,
+        "bytes7" => Token::Bytes7,
+        "bytes8" => Token::Bytes8,
+        "bytes9" => Token::Bytes9,
+        "bytes10" => Token::Bytes10,
+        "bytes11" => Token::Bytes11,
+        "bytes12" => Token::Bytes12,
+        "bytes13" => Token::Bytes13,
+        "bytes14" => Token::Bytes14,
+        "bytes15" => Token::Bytes15,
+        "bytes16" => Token::Bytes16,
+        "bytes17" => Token::Bytes17,
+        "bytes18" => Token::Bytes18,
+        "bytes19" => Token::Bytes19,
+        "bytes20" => Token::Bytes20,
+        "bytes21" => Token::Bytes21,
+        "bytes22" => Token::Bytes22,
+        "bytes23" => Token::Bytes23,
+        "bytes24" => Token::Bytes24,
+        "bytes25" => Token::Bytes25,
+        "bytes26" => Token::Bytes26,
+        "bytes27" => Token::Bytes27,
+        "bytes28" => Token::Bytes28,
+        "bytes29" => Token::Bytes29,
+        "bytes30" => Token::Bytes30,
+        "bytes31" => Token::Bytes31,
+        "bytes32" => Token::Bytes32,
+        "constant" => Token::Constant,
+        "continue" => Token::Continue,
+        "contract" => Token::Contract,
+        "days" => Token::Days,
+        "delete" => Token::Delete,
+        "do" => Token::Do,
+        "else" => Token::Else,
+        "emit" => Token::Emit,
+        "enum" => Token::Enum,
+        "ether" => Token::Ether,
+        "event" => Token::Event,
+        "external" => Token::External,
+        "false" => Token::False,
+        "finney" => Token::Finney,
+        "fixed" => Token::Fixed,
+        "for" => Token::For,
+        "from" => Token::From,
+        "function" => Token::Function,
+        "hex" => Token::Hex,
+        "hours" => Token::Hours,
+        "if" => Token::If,
+        "import" => Token::Import,
+        "indexed" => Token::Indexed,
+        "int" => Token::Int,
+        "int8" => Token::Int8,
+        "int16" => Token::Int16,
+        "int24" => Token::Int24,
+        "int32" => Token::Int32,
+        "int40" => Token::Int40,
+        "int48" => Token::Int48,
+        "int56" => Token::Int56,
+        "int64" => Token::Int64,
+        "int72" => Token::Int72,
+        "int80" => Token::Int80,
+        "int88" => Token::Int88,
+        "int96" => Token::Int96,
+        "int104" => Token::Int104,
+        "int112" => Token::Int112,
+        "int120" => Token::Int120,
+        "int128" => Token::Int128,
+        "int136" => Token::Int136,
+        "int144" => Token::Int144,
+        "int152" => Token::Int152,
+        "int160" => Token::Int160,
+        "int168" => Token::Int168,
+        "int176" => Token::Int176,
+        "int184" => Token::Int184,
+        "int192" => Token::Int192,
+        "int200" => Token::Int200,
+        "int208" => Token::Int208,
+        "int216" => Token::Int216,
+        "int224" => Token::Int224,
+        "int232" => Token::Int232,
+        "int240" => Token::Int240,
+        "int248" => Token::Int248,
+        "int256" => Token::Int256,
+        "interface" => Token::Interface,
+        "internal" => Token::Internal,
+        "is" => Token::Is,
+        "let" => Token::Let,
+        "library" => Token::Library,
+        "mapping" => Token::Mapping,
+        "memory" => Token::Memory,
+        "minutes" => Token::Minutes,
+        "modifier" => Token::Modifier,
+        "new" => Token::New,
+        "payable" => Token::Payable,
+        "pragma" => Token::Pragma,
+        "private" => Token::Private,
+        "public" => Token::Public,
+        "pure" => Token::Pure,
+        "return" => Token::Return,
+        "returns" => Token::Returns,
+        "seconds" => Token::Seconds,
+        "storage" => Token::Storage,
+        "string" => Token::String,
+        "struct" => Token::Struct,
+        "szabo" => Token::Szabo,
+        "throw" => Token::Throw,
+        "true" => Token::True,
+        "ufixed" => Token::Ufixed,
+        "uint" => Token::Uint,
+        "uint8" => Token::Uint8,
+        "uint16" => Token::Uint16,
+        "uint24" => Token::Uint24,
+        "uint32" => Token::Uint32,
+        "uint40" => Token::Uint40,
+        "uint48" => Token::Uint48,
+        "uint56" => Token::Uint56,
+        "uint64" => Token::Uint64,
+        "uint72" => Token::Uint72,
+        "uint80" => Token::Uint80,
+        "uint88" => Token::Uint88,
+        "uint96" => Token::Uint96,
+        "uint104" => Token::Uint104,
+        "uint112" => Token::Uint112,
+        "uint120" => Token::Uint120,
+        "uint128" => Token::Uint128,
+        "uint136" => Token::Uint136,
+        "uint144" => Token::Uint144,
+        "uint152" => Token::Uint152,
+        "uint160" => Token::Uint160,
+        "uint168" => Token::Uint168,
+        "uint176" => Token::Uint176,
+        "uint184" => Token::Uint184,
+        "uint192" => Token::Uint192,
+        "uint200" => Token::Uint200,
+        "uint208" => Token::Uint208,
+        "uint216" => Token::Uint216,
+        "uint224" => Token::Uint224,
+        "uint232" => Token::Uint232,
+        "uint240" => Token::Uint240,
+        "uint248" => Token::Uint248,
+        "uint256" => Token::Uint256,
+        "using" => Token::Using,
+        "var" => Token::Var,
+        "view" => Token::View,
+        "weeks" => Token::Weeks,
+        "wei" => Token::Wei,
+        "while" => Token::While,
+        "years" => Token::Years,
+        "_" => Token::Placeholder,
+        id if id_re.is_match(id) => Token::Identifier(id.to_string()),
+        hex if hex_re.is_match(hex) => Token::HexNumber(hex.to_string()),
+        num if decimal_re.is_match(num) => Token::DecimalNumber(num.to_string()),
+        hex if hex_literal_re.is_match(hex) => Token::HexLiteral(hex.to_string()),
+        string if string_literal_re.is_match(string) => Token::StringLiteral(string.to_string()),
+        version if version_re.is_match(version) => Token::Version(version.to_string()),
+        none => Token::NoMatch
+    }
+}
+
+pub fn next_token(line: &Vec<char>, cur: &mut usize) -> Token {
     let mut collected = String::new();
     while *cur < line.len() {
         if collected.len() == 0 {
@@ -378,18 +559,32 @@ pub fn next_token(line: &Vec<char>, cur: &mut usize) -> Token {
             } else if line[*cur] == '~' {
                 *cur += 1;
                 return Token::Tilda;
-            } else if line[*cur] == '+' {
+            } else if line[*cur] == '/' {
                 *cur += 1;
-                return Token::Plus;
-            } else if line[*cur] == '-' {
-                *cur += 1;
-                return Token::Minus;
+                return Token::Divide;
             } else if !line[*cur].is_whitespace() {
                 collected.push(line[*cur]);
             }
         } else {
-            if *cur + 1 == line.len() || 
-               line[*cur].is_whitespace() ||
+            if line[*cur] == '*' && collected == "*" {
+                *cur += 1;
+                return Token::Power;
+            } else if collected == "*" {
+                return Token::Multiply;
+            } else if line[*cur] == '-' && collected == "-" {
+                *cur += 1;
+                return Token::Decrement;
+            }  else if collected == "-" {
+                return Token::Minus;
+            } else if line[*cur] == '+' && collected == "+" {
+                *cur += 1;
+                return Token::Increment;
+            } else if collected == "+" {
+                return Token::Plus;
+            } else if line[*cur] == '&' && collected == "&" {
+                *cur += 1;
+                return Token::LogicalAnd;
+            } else if line[*cur].is_whitespace() ||
                line[*cur] == ';' ||
                line[*cur] == '{' ||
                line[*cur] == '}' ||
@@ -401,187 +596,19 @@ pub fn next_token(line: &Vec<char>, cur: &mut usize) -> Token {
                line[*cur] == ':' ||
                line[*cur] == '!' ||
                line[*cur] == '~' ||
+               line[*cur] == '*' ||
+               line[*cur] == '/' ||
                line[*cur] == '+' ||
                line[*cur] == '-'
             {
-                return match collected.as_ref() {
-                    "address" => Token::Address,
-                    "anonymous" => Token::Anonymous, 
-                    "as" => Token::As,
-                    "assembly" => Token::Assembly,
-                    "bool" => Token::Bool,
-                    "break" => Token::Break,
-                    "byte" => Token::Byte,
-                    "bytes" => Token::Bytes,
-                    "bytes1" => Token::Bytes1,
-                    "bytes2" => Token::Bytes2,
-                    "bytes3" => Token::Bytes3,
-                    "bytes4" => Token::Bytes4,
-                    "bytes5" => Token::Bytes5,
-                    "bytes6" => Token::Bytes6,
-                    "bytes7" => Token::Bytes7,
-                    "bytes8" => Token::Bytes8,
-                    "bytes9" => Token::Bytes9,
-                    "bytes10" => Token::Bytes10,
-                    "bytes11" => Token::Bytes11,
-                    "bytes12" => Token::Bytes12,
-                    "bytes13" => Token::Bytes13,
-                    "bytes14" => Token::Bytes14,
-                    "bytes15" => Token::Bytes15,
-                    "bytes16" => Token::Bytes16,
-                    "bytes17" => Token::Bytes17,
-                    "bytes18" => Token::Bytes18,
-                    "bytes19" => Token::Bytes19,
-                    "bytes20" => Token::Bytes20,
-                    "bytes21" => Token::Bytes21,
-                    "bytes22" => Token::Bytes22,
-                    "bytes23" => Token::Bytes23,
-                    "bytes24" => Token::Bytes24,
-                    "bytes25" => Token::Bytes25,
-                    "bytes26" => Token::Bytes26,
-                    "bytes27" => Token::Bytes27,
-                    "bytes28" => Token::Bytes28,
-                    "bytes29" => Token::Bytes29,
-                    "bytes30" => Token::Bytes30,
-                    "bytes31" => Token::Bytes31,
-                    "bytes32" => Token::Bytes32,
-                    "constant" => Token::Constant,
-                    "continue" => Token::Continue,
-                    "contract" => Token::Contract,
-                    "days" => Token::Days,
-                    "delete" => Token::Delete,
-                    "do" => Token::Do,
-                    "else" => Token::Else,
-                    "emit" => Token::Emit,
-                    "enum" => Token::Enum,
-                    "ether" => Token::Ether,
-                    "event" => Token::Event,
-                    "external" => Token::External,
-                    "false" => Token::False,
-                    "finney" => Token::Finney,
-                    "fixed" => Token::Fixed,
-                    "for" => Token::For,
-                    "from" => Token::From,
-                    "function" => Token::Function,
-                    "hex" => Token::Hex,
-                    "hours" => Token::Hours,
-                    "if" => Token::If,
-                    "import" => Token::Import,
-                    "indexed" => Token::Indexed,
-                    "int" => Token::Int,
-                    "int8" => Token::Int8,
-                    "int16" => Token::Int16,
-                    "int24" => Token::Int24,
-                    "int32" => Token::Int32,
-                    "int40" => Token::Int40,
-                    "int48" => Token::Int48,
-                    "int56" => Token::Int56,
-                    "int64" => Token::Int64,
-                    "int72" => Token::Int72,
-                    "int80" => Token::Int80,
-                    "int88" => Token::Int88,
-                    "int96" => Token::Int96,
-                    "int104" => Token::Int104,
-                    "int112" => Token::Int112,
-                    "int120" => Token::Int120,
-                    "int128" => Token::Int128,
-                    "int136" => Token::Int136,
-                    "int144" => Token::Int144,
-                    "int152" => Token::Int152,
-                    "int160" => Token::Int160,
-                    "int168" => Token::Int168,
-                    "int176" => Token::Int176,
-                    "int184" => Token::Int184,
-                    "int192" => Token::Int192,
-                    "int200" => Token::Int200,
-                    "int208" => Token::Int208,
-                    "int216" => Token::Int216,
-                    "int224" => Token::Int224,
-                    "int232" => Token::Int232,
-                    "int240" => Token::Int240,
-                    "int248" => Token::Int248,
-                    "int256" => Token::Int256,
-                    "interface" => Token::Interface,
-                    "internal" => Token::Internal,
-                    "is" => Token::Is,
-                    "let" => Token::Let,
-                    "library" => Token::Library,
-                    "mapping" => Token::Mapping,
-                    "memory" => Token::Memory,
-                    "minutes" => Token::Minutes,
-                    "modifier" => Token::Modifier,
-                    "new" => Token::New,
-                    "payable" => Token::Payable,
-                    "pragma" => Token::Pragma,
-                    "private" => Token::Private,
-                    "public" => Token::Public,
-                    "pure" => Token::Pure,
-                    "return" => Token::Return,
-                    "returns" => Token::Returns,
-                    "seconds" => Token::Seconds,
-                    "storage" => Token::Storage,
-                    "string" => Token::String,
-                    "struct" => Token::Struct,
-                    "szabo" => Token::Szabo,
-                    "throw" => Token::Throw,
-                    "true" => Token::True,
-                    "ufixed" => Token::Ufixed,
-                    "uint" => Token::Uint,
-                    "uint8" => Token::Uint8,
-                    "uint16" => Token::Uint16,
-                    "uint24" => Token::Uint24,
-                    "uint32" => Token::Uint32,
-                    "uint40" => Token::Uint40,
-                    "uint48" => Token::Uint48,
-                    "uint56" => Token::Uint56,
-                    "uint64" => Token::Uint64,
-                    "uint72" => Token::Uint72,
-                    "uint80" => Token::Uint80,
-                    "uint88" => Token::Uint88,
-                    "uint96" => Token::Uint96,
-                    "uint104" => Token::Uint104,
-                    "uint112" => Token::Uint112,
-                    "uint120" => Token::Uint120,
-                    "uint128" => Token::Uint128,
-                    "uint136" => Token::Uint136,
-                    "uint144" => Token::Uint144,
-                    "uint152" => Token::Uint152,
-                    "uint160" => Token::Uint160,
-                    "uint168" => Token::Uint168,
-                    "uint176" => Token::Uint176,
-                    "uint184" => Token::Uint184,
-                    "uint192" => Token::Uint192,
-                    "uint200" => Token::Uint200,
-                    "uint208" => Token::Uint208,
-                    "uint216" => Token::Uint216,
-                    "uint224" => Token::Uint224,
-                    "uint232" => Token::Uint232,
-                    "uint240" => Token::Uint240,
-                    "uint248" => Token::Uint248,
-                    "uint256" => Token::Uint256,
-                    "using" => Token::Using,
-                    "var" => Token::Var,
-                    "view" => Token::View,
-                    "weeks" => Token::Weeks,
-                    "wei" => Token::Wei,
-                    "while" => Token::While,
-                    "years" => Token::Years,
-                    "_" => Token::Placeholder,
-                    id if id_re.is_match(id) => Token::Identifier(id.to_string()),
-                    hex if hex_re.is_match(hex) => Token::HexNumber(hex.to_string()),
-                    num if decimal_re.is_match(num) => Token::DecimalNumber(num.to_string()),
-                    hex if hex_literal_re.is_match(hex) => Token::HexLiteral(hex.to_string()),
-                    string if string_literal_re.is_match(string) => Token::StringLiteral(string.to_string()),
-                    version if version_re.is_match(version) => Token::Version(version.to_string()),
-                    none => panic!("No Token Matched {}", none)
-                }
+                return match_collected(collected);
             } else {
                 collected.push(line[*cur]);
             }
         }
         *cur += 1;
     }
-    Token::NoMatch
+    match_collected(collected)
 }
 
 pub fn peek_token(line: &Vec<char>, cur: &mut usize) -> Token {
@@ -589,4 +616,85 @@ pub fn peek_token(line: &Vec<char>, cur: &mut usize) -> Token {
     let next = next_token(line, cur);
     *cur = old;
     next
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn recognition_test1() {
+        let cur = &mut 0;
+        let chars = String::from("contract A + B && { }{} () (A++)--;").chars().collect::<Vec<char>>();
+        let a = String::from("A");
+        let b = String::from("B");
+        match next_token(&chars, cur) {
+            Token::Contract => (),
+            actual => panic!("Expected {:?}, Actual {:?}", Token::Contract, actual)
+        }
+        match next_token(&chars, cur) {
+            Token::Identifier(a) => (),
+            actual => panic!("Expected {:?}, Actual {:?}", Token::Identifier(a), actual)
+        }
+        match next_token(&chars, cur) {
+            Token::Plus => (),
+            actual => panic!("Expected {:?}, Actual {:?}", Token::Plus, actual)
+        }
+        match next_token(&chars, cur) {
+            Token::Identifier(b) => (),
+            actual => panic!("Expected {:?}, Actual {:?}", Token::Identifier(b), actual)
+        }
+        match next_token(&chars, cur) {
+            Token::LogicalAnd => (),
+            actual => panic!("Expected {:?}, Actual {:?}", Token::LogicalAnd, actual)
+        }
+        match next_token(&chars, cur) {
+            Token::OpenBrace => (),
+            actual => panic!("Expected {:?}, Actual {:?}", Token::OpenBrace, actual)
+        }
+        match next_token(&chars, cur) {
+            Token::CloseBrace => (),
+            actual => panic!("Expected {:?}, Actual {:?}", Token::CloseBrace, actual)
+        }
+        match next_token(&chars, cur) {
+            Token::OpenBrace => (),
+            actual => panic!("Expected {:?}, Actual {:?}", Token::OpenBrace, actual)
+        }
+        match next_token(&chars, cur) {
+            Token::CloseBrace => (),
+            actual => panic!("Expected {:?}, Actual {:?}", Token::CloseBrace, actual)
+        }
+        match next_token(&chars, cur) {
+            Token::OpenParenthesis => (),
+            actual => panic!("Expected {:?}, Actual {:?}", Token::OpenParenthesis, actual)
+        }
+        match next_token(&chars, cur) {
+            Token::CloseParenthesis => (),
+            actual => panic!("Expected {:?}, Actual {:?}", Token::CloseParenthesis, actual)
+        }
+        match next_token(&chars, cur) {
+            Token::OpenParenthesis => (),
+            actual => panic!("Expected {:?}, Actual {:?}", Token::OpenParenthesis, actual)
+        }
+        match next_token(&chars, cur) {
+            Token::Identifier(a) => (),
+            actual => panic!("Expected {:?}, Actual {:?}", Token::Identifier(a), actual)
+        }
+        match next_token(&chars, cur) {
+            Token::Increment => (),
+            actual => panic!("Expected {:?}, Actual {:?}", Token::Increment, actual)
+        }
+        match next_token(&chars, cur) {
+            Token::CloseParenthesis => (),
+            actual => panic!("Expected {:?}, Actual {:?}", Token::CloseParenthesis, actual)
+        }
+        match next_token(&chars, cur) {
+            Token::Decrement => (),
+            actual => panic!("Expected {:?}, Actual {:?}", Token::Decrement, actual)
+        }
+        match next_token(&chars, cur) {
+            Token::Semicolon => (),
+            actual => panic!("Expected {:?}, Actual {:?}", Token::Semicolon, actual)
+        }
+    }
 }
