@@ -56,6 +56,7 @@ pub enum Token {
     Delete,
     Divide,
     Do,
+    Dot,
     Else,
     Emit,
     Enum,
@@ -562,6 +563,9 @@ pub fn next_token(line: &Vec<char>, cur: &mut usize) -> Token {
             } else if line[*cur] == '/' {
                 *cur += 1;
                 return Token::Divide;
+            } else if line[*cur] == '.' {
+                *cur += 1;
+                return Token::Dot;
             } else if !line[*cur].is_whitespace() {
                 collected.push(line[*cur]);
             }
@@ -599,7 +603,8 @@ pub fn next_token(line: &Vec<char>, cur: &mut usize) -> Token {
                line[*cur] == '*' ||
                line[*cur] == '/' ||
                line[*cur] == '+' ||
-               line[*cur] == '-'
+               line[*cur] == '-' ||
+               line[*cur] == '.'
             {
                 return match_collected(collected);
             } else {
