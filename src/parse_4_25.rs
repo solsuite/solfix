@@ -135,51 +135,40 @@ fn parse_contract_part(chars: &Vec<char>, cur: &mut usize, node: &mut ParseNode,
 
 /*** Expression ***/
 
+fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: lex_4_25::Token) -> ParseNode {
+    let mut result = ParseNode{ node: lex_4_25::Token::NoMatch, children: vec![] };
+    let mut peek = lex_4_25::peek_token(&chars, cur);
+    match peek {
+        lex_4_25::Token::Plus => {
+            lex_4_25::next_token(&chars, cur);
+            result.node = lex_4_25::Token::Plus; 
+            result.children.push(Box::new(ParseNode{ node: left, children: vec![] }));
+            result.children.push(Box::new(parse_expression(&chars, cur)));
+        }
+        lex_4_25::Token::Multiply => {
+            lex_4_25::next_token(&chars, cur);
+            result.node = lex_4_25::Token::Multiply; 
+            result.children.push(Box::new(ParseNode{ node: left, children: vec![] }));
+            result.children.push(Box::new(parse_expression(&chars, cur)));
+        }
+        _ => {
+            result.node = left;
+        }
+    }
+    result
+}
+
 fn parse_expression(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
     let mut result = ParseNode{ node: lex_4_25::Token::NoMatch, children: vec![] };
     let mut peek = lex_4_25::peek_token(&chars, cur);
     match peek {
         lex_4_25::Token::DecimalNumber(..) => {
-            let num = lex_4_25::next_token(&chars, cur);
-            peek = lex_4_25::peek_token(&chars, cur);
-            match peek {
-                lex_4_25::Token::Plus => {
-                    lex_4_25::next_token(&chars, cur);
-                    result.node = lex_4_25::Token::Plus; 
-                    result.add_child(num);
-                    result.children.push(Box::new(parse_expression(&chars, cur)));
-                }
-                lex_4_25::Token::Multiply => {
-                    lex_4_25::next_token(&chars, cur);
-                    result.node = lex_4_25::Token::Multiply; 
-                    result.add_child(num);
-                    result.children.push(Box::new(parse_expression(&chars, cur)));
-                }
-                _ => {
-                    result.node = num;
-                }
-            }
+            let left = lex_4_25::next_token(&chars, cur);
+            result = parse_operation(&chars, cur, left);
         }
         lex_4_25::Token::HexNumber(..) => {
-            let num = lex_4_25::next_token(&chars, cur);
-            peek = lex_4_25::peek_token(&chars, cur);
-            match peek {
-                lex_4_25::Token::Plus => {
-                    lex_4_25::next_token(&chars, cur);
-                    result.node = lex_4_25::Token::Plus; 
-                    result.add_child(num);
-                    result.children.push(Box::new(parse_expression(&chars, cur)));
-                }
-                lex_4_25::Token::Multiply => {
-                    lex_4_25::next_token(&chars, cur);
-                    result.node = lex_4_25::Token::Multiply; 
-                    result.add_child(num);
-                    result.children.push(Box::new(parse_expression(&chars, cur)));
-                }
-                _ => {
-                    result.node = num;
-                }
-            }
+            let left = lex_4_25::next_token(&chars, cur);
+            result = parse_operation(&chars, cur, left);
         }
         lex_4_25::Token::OpenParenthesis => {
             lex_4_25::next_token(&chars, cur);
@@ -205,6 +194,16 @@ fn parse_expression(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
                 }
                 _ => panic!()
             }
+        }
+        lex_4_25::Token::Exclamation | 
+        lex_4_25::Token::Tilda       | 
+        lex_4_25::Token::Delete      | 
+        lex_4_25::Token::Increment   | 
+        lex_4_25::Token::Decrement   |
+        lex_4_25::Token::Plus        |
+        lex_4_25::Token::Minus => {
+            result.node = lex_4_25::next_token(&chars, cur);
+            result.children.push(Box::new(parse_expression(&chars, cur)));
         }
         _ => ()
     }
