@@ -11,6 +11,7 @@ pub struct ParseNode {
     children: Vec<Box<ParseNode>>
 }
 
+/* Methods */
 impl ParseNode {
     fn add_child(&mut self, token: lex_4_25::Token) { 
         self.children.push(Box::new(ParseNode{ node: token, children: vec![] })); 
@@ -27,6 +28,12 @@ impl ParseNode {
         other.children.push(Box::new(self));
         other.children.swap(0, 1);
         other
+    }
+}
+
+impl lex_4_25::Token {
+    fn to_leaf(mut self) -> ParseNode {
+        ParseNode { node: self, children: vec![] }
     }
 }
 
@@ -150,14 +157,14 @@ fn parse_contract_part(chars: &Vec<char>, cur: &mut usize, node: &mut ParseNode,
 
 /*** Expression ***/
 
-fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: lex_4_25::Token) -> ParseNode {
+fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: ParseNode) -> ParseNode {
     let mut result = ParseNode{ node: lex_4_25::Token::NoMatch, children: vec![] };
     let mut peek = lex_4_25::peek_token(&chars, cur);
     match peek {
         lex_4_25::Token::Power => {
             lex_4_25::next_token(&chars, cur);
             result.node = lex_4_25::Token::Power;
-            result.children.push(Box::new(ParseNode{ node: left, children: vec![] }));
+            result.children.push(Box::new(left));
             let mut right = parse_expression(&chars, cur);
             match right.node {
                 lex_4_25::Token::Power               |
@@ -196,7 +203,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: lex_4_25::Token) ->
         lex_4_25::Token::Divide => {
             lex_4_25::next_token(&chars, cur);
             result.node = lex_4_25::Token::Divide; 
-            result.children.push(Box::new(ParseNode{ node: left, children: vec![] }));
+            result.children.push(Box::new(left));
             let mut right = parse_expression(&chars, cur);
             match right.node {
                 lex_4_25::Token::Divide              |
@@ -234,7 +241,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: lex_4_25::Token) ->
         lex_4_25::Token::Multiply => {
             lex_4_25::next_token(&chars, cur);
             result.node = lex_4_25::Token::Multiply; 
-            result.children.push(Box::new(ParseNode{ node: left, children: vec![] }));
+            result.children.push(Box::new(left));
             let mut right = parse_expression(&chars, cur);
             match right.node {
                 lex_4_25::Token::Divide              |
@@ -272,7 +279,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: lex_4_25::Token) ->
         lex_4_25::Token::Modulus => {
             lex_4_25::next_token(&chars, cur);
             result.node = lex_4_25::Token::Modulus; 
-            result.children.push(Box::new(ParseNode{ node: left, children: vec![] }));
+            result.children.push(Box::new(left));
             let mut right = parse_expression(&chars, cur);
             match right.node {
                 lex_4_25::Token::Divide              |
@@ -310,7 +317,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: lex_4_25::Token) ->
         lex_4_25::Token::Plus => {
             lex_4_25::next_token(&chars, cur);
             result.node = lex_4_25::Token::Plus; 
-            result.children.push(Box::new(ParseNode{ node: left, children: vec![] }));
+            result.children.push(Box::new(left));
             let mut right = parse_expression(&chars, cur);
             match right.node {
                 lex_4_25::Token::Minus               |
@@ -345,7 +352,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: lex_4_25::Token) ->
         lex_4_25::Token::Minus => {
             lex_4_25::next_token(&chars, cur);
             result.node = lex_4_25::Token::Minus; 
-            result.children.push(Box::new(ParseNode{ node: left, children: vec![] }));
+            result.children.push(Box::new(left));
             let mut right = parse_expression(&chars, cur);
             match right.node {
                 lex_4_25::Token::Minus               |
@@ -380,7 +387,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: lex_4_25::Token) ->
         lex_4_25::Token::ShiftLeft => {
             lex_4_25::next_token(&chars, cur);
             result.node = lex_4_25::Token::ShiftLeft;
-            result.children.push(Box::new(ParseNode{ node: left, children: vec![] }));
+            result.children.push(Box::new(left));
             let mut right = parse_expression(&chars, cur);
             match right.node {
                 lex_4_25::Token::ShiftLeft           |
@@ -413,7 +420,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: lex_4_25::Token) ->
         lex_4_25::Token::ShiftRight => {
             lex_4_25::next_token(&chars, cur);
             result.node = lex_4_25::Token::ShiftRight;
-            result.children.push(Box::new(ParseNode{ node: left, children: vec![] }));
+            result.children.push(Box::new(left));
             let mut right = parse_expression(&chars, cur);
             match right.node {
                 lex_4_25::Token::ShiftLeft           |
@@ -446,7 +453,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: lex_4_25::Token) ->
         lex_4_25::Token::BitwiseAnd => {
             lex_4_25::next_token(&chars, cur);
             result.node = lex_4_25::Token::BitwiseAnd;
-            result.children.push(Box::new(ParseNode{ node: left, children: vec![] }));
+            result.children.push(Box::new(left));
             let mut right = parse_expression(&chars, cur);
             match right.node {
                 lex_4_25::Token::BitwiseAnd          |
@@ -477,7 +484,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: lex_4_25::Token) ->
         lex_4_25::Token::BitwiseXor => {
             lex_4_25::next_token(&chars, cur);
             result.node = lex_4_25::Token::BitwiseXor;
-            result.children.push(Box::new(ParseNode{ node: left, children: vec![] }));
+            result.children.push(Box::new(left));
             let mut right = parse_expression(&chars, cur);
             match right.node {
                 lex_4_25::Token::BitwiseXor          |
@@ -507,7 +514,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: lex_4_25::Token) ->
         lex_4_25::Token::BitwiseOr => {
             lex_4_25::next_token(&chars, cur);
             result.node = lex_4_25::Token::BitwiseOr;
-            result.children.push(Box::new(ParseNode{ node: left, children: vec![] }));
+            result.children.push(Box::new(left));
             let mut right = parse_expression(&chars, cur);
             match right.node {
                 lex_4_25::Token::BitwiseXor          |
@@ -537,7 +544,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: lex_4_25::Token) ->
         lex_4_25::Token::GreaterThan => {
             lex_4_25::next_token(&chars, cur);
             result.node = lex_4_25::Token::GreaterThan;
-            result.children.push(Box::new(ParseNode{ node: left, children: vec![] }));
+            result.children.push(Box::new(left));
             let mut right = parse_expression(&chars, cur);
             match right.node {
                 lex_4_25::Token::GreaterThan         |
@@ -565,7 +572,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: lex_4_25::Token) ->
         lex_4_25::Token::LessThan => {
             lex_4_25::next_token(&chars, cur);
             result.node = lex_4_25::Token::LessThan;
-            result.children.push(Box::new(ParseNode{ node: left, children: vec![] }));
+            result.children.push(Box::new(left));
             let mut right = parse_expression(&chars, cur);
             match right.node {
                 lex_4_25::Token::GreaterThan         |
@@ -593,7 +600,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: lex_4_25::Token) ->
         lex_4_25::Token::GreaterThanOrEquals => {
             lex_4_25::next_token(&chars, cur);
             result.node = lex_4_25::Token::GreaterThanOrEquals;
-            result.children.push(Box::new(ParseNode{ node: left, children: vec![] }));
+            result.children.push(Box::new(left));
             let mut right = parse_expression(&chars, cur);
             match right.node {
                 lex_4_25::Token::GreaterThan         |
@@ -621,7 +628,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: lex_4_25::Token) ->
         lex_4_25::Token::LessThanOrEquals => {
             lex_4_25::next_token(&chars, cur);
             result.node = lex_4_25::Token::LessThanOrEquals;
-            result.children.push(Box::new(ParseNode{ node: left, children: vec![] }));
+            result.children.push(Box::new(left));
             let mut right = parse_expression(&chars, cur);
             match right.node {
                 lex_4_25::Token::GreaterThan         |
@@ -649,7 +656,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: lex_4_25::Token) ->
         lex_4_25::Token::Equals => {
             lex_4_25::next_token(&chars, cur);
             result.node = lex_4_25::Token::Equals;
-            result.children.push(Box::new(ParseNode{ node: left, children: vec![] }));
+            result.children.push(Box::new(left));
             let mut right = parse_expression(&chars, cur);
             match right.node {
                 lex_4_25::Token::Equals              |
@@ -673,7 +680,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: lex_4_25::Token) ->
         lex_4_25::Token::NotEquals => {
             lex_4_25::next_token(&chars, cur);
             result.node = lex_4_25::Token::NotEquals;
-            result.children.push(Box::new(ParseNode{ node: left, children: vec![] }));
+            result.children.push(Box::new(left));
             let mut right = parse_expression(&chars, cur);
             match right.node {
                 lex_4_25::Token::Equals              |
@@ -697,7 +704,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: lex_4_25::Token) ->
         lex_4_25::Token::LogicalAnd => {
             lex_4_25::next_token(&chars, cur);
             result.node = lex_4_25::Token::LogicalAnd;
-            result.children.push(Box::new(ParseNode{ node: left, children: vec![] }));
+            result.children.push(Box::new(left));
             let mut right = parse_expression(&chars, cur);
             match right.node {
                 lex_4_25::Token::LogicalAnd          |
@@ -719,7 +726,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: lex_4_25::Token) ->
         lex_4_25::Token::LogicalOr => {
             lex_4_25::next_token(&chars, cur);
             result.node = lex_4_25::Token::LogicalOr;
-            result.children.push(Box::new(ParseNode{ node: left, children: vec![] }));
+            result.children.push(Box::new(left));
             let mut right = parse_expression(&chars, cur);
             match right.node {
                 lex_4_25::Token::LogicalOr           | 
@@ -740,7 +747,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: lex_4_25::Token) ->
         lex_4_25::Token::Set => {
             lex_4_25::next_token(&chars, cur);
             result.node = lex_4_25::Token::Set;
-            result.children.push(Box::new(ParseNode{ node: left, children: vec![] }));
+            result.children.push(Box::new(left));
             let mut right = parse_expression(&chars, cur);
             match right.node {
                 lex_4_25::Token::Set                 |
@@ -760,7 +767,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: lex_4_25::Token) ->
         lex_4_25::Token::OrEquals => {
             lex_4_25::next_token(&chars, cur);
             result.node = lex_4_25::Token::OrEquals;
-            result.children.push(Box::new(ParseNode{ node: left, children: vec![] }));
+            result.children.push(Box::new(left));
             let mut right = parse_expression(&chars, cur);
             match right.node {
                 lex_4_25::Token::Set                 |
@@ -780,7 +787,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: lex_4_25::Token) ->
         lex_4_25::Token::XorEquals => {
             lex_4_25::next_token(&chars, cur);
             result.node = lex_4_25::Token::XorEquals;
-            result.children.push(Box::new(ParseNode{ node: left, children: vec![] }));
+            result.children.push(Box::new(left));
             let mut right = parse_expression(&chars, cur);
             match right.node {
                 lex_4_25::Token::Set                 |
@@ -800,7 +807,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: lex_4_25::Token) ->
         lex_4_25::Token::AndEquals => {
             lex_4_25::next_token(&chars, cur);
             result.node = lex_4_25::Token::AndEquals;
-            result.children.push(Box::new(ParseNode{ node: left, children: vec![] }));
+            result.children.push(Box::new(left));
             let mut right = parse_expression(&chars, cur);
             match right.node {
                 lex_4_25::Token::Set                 |
@@ -820,7 +827,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: lex_4_25::Token) ->
         lex_4_25::Token::ShiftLeftEquals => {
             lex_4_25::next_token(&chars, cur);
             result.node = lex_4_25::Token::ShiftLeftEquals;
-            result.children.push(Box::new(ParseNode{ node: left, children: vec![] }));
+            result.children.push(Box::new(left));
             let mut right = parse_expression(&chars, cur);
             match right.node {
                 lex_4_25::Token::Set                 |
@@ -840,7 +847,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: lex_4_25::Token) ->
         lex_4_25::Token::ShiftRightEquals => {
             lex_4_25::next_token(&chars, cur);
             result.node = lex_4_25::Token::ShiftRightEquals;
-            result.children.push(Box::new(ParseNode{ node: left, children: vec![] }));
+            result.children.push(Box::new(left));
             let mut right = parse_expression(&chars, cur);
             match right.node {
                 lex_4_25::Token::Set                 |
@@ -860,7 +867,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: lex_4_25::Token) ->
         lex_4_25::Token::PlusEquals => {
             lex_4_25::next_token(&chars, cur);
             result.node = lex_4_25::Token::PlusEquals;
-            result.children.push(Box::new(ParseNode{ node: left, children: vec![] }));
+            result.children.push(Box::new(left));
             let mut right = parse_expression(&chars, cur);
             match right.node {
                 lex_4_25::Token::Set                 |
@@ -880,7 +887,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: lex_4_25::Token) ->
         lex_4_25::Token::MinusEquals => {
             lex_4_25::next_token(&chars, cur);
             result.node = lex_4_25::Token::MinusEquals;
-            result.children.push(Box::new(ParseNode{ node: left, children: vec![] }));
+            result.children.push(Box::new(left));
             let mut right = parse_expression(&chars, cur);
             match right.node {
                 lex_4_25::Token::Set                 |
@@ -900,7 +907,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: lex_4_25::Token) ->
         lex_4_25::Token::ModEquals => {
             lex_4_25::next_token(&chars, cur);
             result.node = lex_4_25::Token::ModEquals;
-            result.children.push(Box::new(ParseNode{ node: left, children: vec![] }));
+            result.children.push(Box::new(left));
             let mut right = parse_expression(&chars, cur);
             match right.node {
                 lex_4_25::Token::Set                 |
@@ -920,7 +927,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: lex_4_25::Token) ->
         lex_4_25::Token::MultiplyEquals => {
             lex_4_25::next_token(&chars, cur);
             result.node = lex_4_25::Token::MultiplyEquals;
-            result.children.push(Box::new(ParseNode{ node: left, children: vec![] }));
+            result.children.push(Box::new(left));
             let mut right = parse_expression(&chars, cur);
             match right.node {
                 lex_4_25::Token::Set                 |
@@ -940,7 +947,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: lex_4_25::Token) ->
         lex_4_25::Token::DivideEquals => {
             lex_4_25::next_token(&chars, cur);
             result.node = lex_4_25::Token::DivideEquals;
-            result.children.push(Box::new(ParseNode{ node: left, children: vec![] }));
+            result.children.push(Box::new(left));
             let mut right = parse_expression(&chars, cur);
             match right.node {
                 lex_4_25::Token::Set                 |
@@ -961,11 +968,11 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: lex_4_25::Token) ->
         lex_4_25::Token::Dot => {
             lex_4_25::next_token(&chars, cur);
             result.node = lex_4_25::Token::Dot; 
-            result.children.push(Box::new(ParseNode{ node: left, children: vec![] }));
+            result.children.push(Box::new(left));
             result.children.push(Box::new(parse_expression(&chars, cur)));
         }
         _ => {
-            result.node = left;
+            result.node = left.node;
         }
     }
     result
@@ -975,21 +982,36 @@ fn parse_expression(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
     let mut result = ParseNode{ node: lex_4_25::Token::NoMatch, children: vec![] };
     let mut peek = lex_4_25::peek_token(&chars, cur);
     match peek {
-        lex_4_25::Token::Identifier(..) => {
-            let left = lex_4_25::next_token(&chars, cur);
-            result = parse_operation(&chars, cur, left);
-        }
         lex_4_25::Token::New => {
             result.node = lex_4_25::next_token(&chars, cur);
             result.children.push(Box::new(parse_type_name(&chars, cur)));
         }
-        lex_4_25::Token::DecimalNumber(..) => {
-            let left = lex_4_25::next_token(&chars, cur);
+        lex_4_25::Token::DecimalNumber(..) | lex_4_25::Token::HexNumber(..) => {
+            let mut left = ParseNode { node: lex_4_25::next_token(&chars, cur), children: vec![] };
+            peek = lex_4_25::peek_token(&chars, cur);
+            if peek.is_number_unit() {
+                 left.add_child(lex_4_25::next_token(&chars, cur));  
+            }
             result = parse_operation(&chars, cur, left);
         }
-        lex_4_25::Token::HexNumber(..) => {
+        lex_4_25::Token::Identifier(..) |
+        lex_4_25::Token::HexLiteral(..) |
+        lex_4_25::Token::StringLiteral(..) => {
             let left = lex_4_25::next_token(&chars, cur);
-            result = parse_operation(&chars, cur, left);
+            result = parse_operation(&chars, cur, left.to_leaf());
+        }
+        lex_4_25::Token::OpenParenthesis => {
+            lex_4_25::next_token(&chars, cur);
+            result = parse_expression(&chars, cur);
+            let mut stop = false;
+            while !stop {
+                match lex_4_25::next_token(&chars, cur) {
+                    lex_4_25::Token::Comma => result.children.push(Box::new(parse_expression(&chars, cur))),
+                    lex_4_25::Token::CloseParenthesis => stop = true,
+                    _ => panic!("Invalid tuple expression")
+                }
+                result = parse_operation(&chars, cur, result);
+            }
         }
         lex_4_25::Token::Exclamation | 
         lex_4_25::Token::Tilda       | 
@@ -1001,7 +1023,12 @@ fn parse_expression(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
             result.node = lex_4_25::next_token(&chars, cur);
             result.children.push(Box::new(parse_expression(&chars, cur)));
         }
-        _ => ()
+        elementary => {
+            if elementary.is_elementary_type() {
+                let left = lex_4_25::next_token(&chars, cur);
+                result = parse_operation(&chars, cur, left.to_leaf());
+            }
+        }
     }
     result
 }
