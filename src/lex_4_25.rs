@@ -3,9 +3,13 @@ use regex::Regex;
 #[derive(Clone, Debug)]
 pub enum Token {
     Address,
+    AndEquals,
     Anonymous,
     As,
     Assembly,
+    BitwiseAnd,
+    BitwiseOr,
+    BitwiseXor,
     Bool,
     Break,
     Byte,
@@ -55,11 +59,13 @@ pub enum Token {
     Decrement,
     Delete,
     Divide,
+    DivideEquals,
     Do,
     Dot,
     Else,
     Emit,
     Enum,
+    Equals,
     Ether,
     Event,
     Exclamation,
@@ -70,6 +76,8 @@ pub enum Token {
     For,
     From,
     Function,
+    GreaterThan,
+    GreaterThanOrEquals,
     Hex,
     HexLiteral(String),
     HexNumber(String),
@@ -115,6 +123,8 @@ pub enum Token {
     Interface,
     Internal,
     Is,
+    LessThan,
+    LessThanOrEquals,
     Let,
     Library, 
     LogicalAnd,
@@ -122,26 +132,39 @@ pub enum Token {
     Mapping,
     Memory,
     Minus,
+    MinusEquals,
     Minutes,
+    ModEquals,
     Modifier,
+    Modulus,
     Multiply,
+    MultiplyEquals,
     New,
     NoMatch,
+    NotEquals,
     OpenBrace,
     OpenBracket,
     OpenParenthesis,
+    OrEquals,
     Payable,
     Placeholder,
     Plus,
+    PlusEquals,
     Power,
     Pragma,
     Private,
     Public,
     Pure,
+    Question,
     Return,
     Returns,
     Seconds,
     Semicolon,
+    Set,
+    ShiftLeft,
+    ShiftLeftEquals,
+    ShiftRight,
+    ShiftRightEquals,
     Storage,
     String,
     StringLiteral(String),
@@ -191,6 +214,7 @@ pub enum Token {
     Weeks,
     Wei,
     While,
+    XorEquals,
     Years,
 }
 
@@ -548,16 +572,16 @@ pub fn next_token(line: &Vec<char>, cur: &mut usize) -> Token {
             } else if line[*cur] == ']' {
                 *cur += 1;
                 return Token::CloseBracket;
+            } else if line[*cur] == '?' {
+                *cur += 1;
+                return Token::Question;
             } else if line[*cur] == ',' {
                 *cur += 1;
                 return Token::Comma;
             } else if line[*cur] == ':' {
                 *cur += 1;
                 return Token::Colon;
-            } else if line[*cur] == '!' {
-                *cur += 1;
-                return Token::Exclamation;
-            } else if line[*cur] == '~' {
+            }  else if line[*cur] == '~' {
                 *cur += 1;
                 return Token::Tilda;
             } else if line[*cur] == '/' {
@@ -566,6 +590,9 @@ pub fn next_token(line: &Vec<char>, cur: &mut usize) -> Token {
             } else if line[*cur] == '.' {
                 *cur += 1;
                 return Token::Dot;
+            } else if line[*cur] == '^' {
+                *cur += 1;
+                return Token::BitwiseXor;
             } else if !line[*cur].is_whitespace() {
                 collected.push(line[*cur]);
             }
@@ -573,21 +600,78 @@ pub fn next_token(line: &Vec<char>, cur: &mut usize) -> Token {
             if line[*cur] == '*' && collected == "*" {
                 *cur += 1;
                 return Token::Power;
-            } else if collected == "*" {
-                return Token::Multiply;
-            } else if line[*cur] == '-' && collected == "-" {
+            } else if line[*cur] == '=' && collected == "=" {
                 *cur += 1;
-                return Token::Decrement;
-            }  else if collected == "-" {
-                return Token::Minus;
+                return Token::Equals;
+            } else if line[*cur] == '=' && collected == "<" {
+                *cur += 1;
+                return Token::LessThanOrEquals;
+            } else if line[*cur] == '=' && collected == ">" {
+                *cur += 1;
+                return Token::GreaterThanOrEquals;
+            } else if line[*cur] == '=' && collected == "!" {
+                *cur += 1;
+                return Token::NotEquals;
+            } else if line[*cur] == '=' && collected == "|" {
+                *cur += 1;
+                return Token::OrEquals;
+            } else if line[*cur] == '=' && collected == "+" {
+                *cur += 1;
+                return Token::PlusEquals;
+            } else if line[*cur] == '=' && collected == "-" {
+                *cur += 1;
+                return Token::MinusEquals;
+            } else if line[*cur] == '=' && collected == "*" {
+                *cur += 1;
+                return Token::MultiplyEquals;
+            } else if line[*cur] == '=' && collected == "/" {
+                *cur += 1;
+                return Token::DivideEquals;
+            } else if line[*cur] == '=' && collected == "%" {
+                *cur += 1;
+                return Token::ModEquals;
+            } else if line[*cur] == '=' && collected == "<<" {
+                *cur += 1;
+                return Token::ShiftLeftEquals;
+            } else if line[*cur] == '=' && collected == ">>" {
+                *cur += 1;
+                return Token::ShiftRightEquals;
             } else if line[*cur] == '+' && collected == "+" {
                 *cur += 1;
                 return Token::Increment;
-            } else if collected == "+" {
-                return Token::Plus;
+            } else if line[*cur] == '-' && collected == "-" {
+                *cur += 1;
+                return Token::Decrement;
+            } else if line[*cur] == '>' && collected == ">" {
+                *cur += 1;
+                return Token::ShiftRight;
+            } else if line[*cur] == '|' && collected == "|" {
+                *cur += 1;
+                return Token::LogicalOr; 
             } else if line[*cur] == '&' && collected == "&" {
                 *cur += 1;
                 return Token::LogicalAnd;
+            } else if collected == "<<" {
+                *cur += 1;
+                return Token::ShiftLeft;
+            } else if collected == "-" {
+                return Token::Minus;
+            } else if collected == "+" {
+                return Token::Plus;
+            } else if collected == "|" {
+                return Token::BitwiseOr;
+            } else if collected == "&" {
+                return Token::BitwiseAnd;
+            } else if collected == "<" {
+                return Token::LessThan;
+            } else if collected == "=" {
+                return Token::Set;
+            } else if collected == "!" {
+                return Token::Exclamation;
+            } else if collected == ">" {
+                return Token::GreaterThan;
+            } else if collected == "*" {
+                return Token::Multiply;
             } else if line[*cur].is_whitespace() ||
                line[*cur] == ';' ||
                line[*cur] == '{' ||
@@ -604,6 +688,10 @@ pub fn next_token(line: &Vec<char>, cur: &mut usize) -> Token {
                line[*cur] == '/' ||
                line[*cur] == '+' ||
                line[*cur] == '-' ||
+               line[*cur] == '=' ||
+               line[*cur] == '>' ||
+               line[*cur] == '<' ||
+               line[*cur] == '!' ||
                line[*cur] == '.'
             {
                 return match_collected(collected);
