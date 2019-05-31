@@ -711,83 +711,21 @@ pub fn peek_token(line: &Vec<char>, cur: &mut usize) -> Token {
     next
 }
 
-#[cfg(test)]
+#[cfg(test)] 
 mod tests {
     use super::*;
 
+    /* String Literal */
+
     #[test]
-    fn recognition_test1() {
-        let cur = &mut 0;
-        let chars = String::from("contract A + B && { }{} () (A++)--;").chars().collect::<Vec<char>>();
-        let a = String::from("A");
-        let b = String::from("B");
-        match next_token(&chars, cur) {
-            Token::Contract => (),
-            actual => panic!("Expected {:?}, Actual {:?}", Token::Contract, actual)
-        }
-        match next_token(&chars, cur) {
-            Token::Identifier(a) => (),
-            actual => panic!("Expected {:?}, Actual {:?}", Token::Identifier(a), actual)
-        }
-        match next_token(&chars, cur) {
-            Token::Plus => (),
-            actual => panic!("Expected {:?}, Actual {:?}", Token::Plus, actual)
-        }
-        match next_token(&chars, cur) {
-            Token::Identifier(b) => (),
-            actual => panic!("Expected {:?}, Actual {:?}", Token::Identifier(b), actual)
-        }
-        match next_token(&chars, cur) {
-            Token::LogicalAnd => (),
-            actual => panic!("Expected {:?}, Actual {:?}", Token::LogicalAnd, actual)
-        }
-        match next_token(&chars, cur) {
-            Token::OpenBrace => (),
-            actual => panic!("Expected {:?}, Actual {:?}", Token::OpenBrace, actual)
-        }
-        match next_token(&chars, cur) {
-            Token::CloseBrace => (),
-            actual => panic!("Expected {:?}, Actual {:?}", Token::CloseBrace, actual)
-        }
-        match next_token(&chars, cur) {
-            Token::OpenBrace => (),
-            actual => panic!("Expected {:?}, Actual {:?}", Token::OpenBrace, actual)
-        }
-        match next_token(&chars, cur) {
-            Token::CloseBrace => (),
-            actual => panic!("Expected {:?}, Actual {:?}", Token::CloseBrace, actual)
-        }
-        match next_token(&chars, cur) {
-            Token::OpenParenthesis => (),
-            actual => panic!("Expected {:?}, Actual {:?}", Token::OpenParenthesis, actual)
-        }
-        match next_token(&chars, cur) {
-            Token::CloseParenthesis => (),
-            actual => panic!("Expected {:?}, Actual {:?}", Token::CloseParenthesis, actual)
-        }
-        match next_token(&chars, cur) {
-            Token::OpenParenthesis => (),
-            actual => panic!("Expected {:?}, Actual {:?}", Token::OpenParenthesis, actual)
-        }
-        match next_token(&chars, cur) {
-            Token::Identifier(a) => (),
-            actual => panic!("Expected {:?}, Actual {:?}", Token::Identifier(a), actual)
-        }
-        match next_token(&chars, cur) {
-            Token::Increment => (),
-            actual => panic!("Expected {:?}, Actual {:?}", Token::Increment, actual)
-        }
-        match next_token(&chars, cur) {
-            Token::CloseParenthesis => (),
-            actual => panic!("Expected {:?}, Actual {:?}", Token::CloseParenthesis, actual)
-        }
-        match next_token(&chars, cur) {
-            Token::Decrement => (),
-            actual => panic!("Expected {:?}, Actual {:?}", Token::Decrement, actual)
-        }
-        match next_token(&chars, cur) {
-            Token::Semicolon => (),
-            actual => panic!("Expected {:?}, Actual {:?}", Token::Semicolon, actual)
+    fn string_literal_test() {
+        let path = String::from("\"test_file.sol\"");
+        let chars = path.chars().collect::<Vec<char>>();
+        let cur = &mut 0; 
+        let actual = next_token(&chars, cur);
+        match actual {
+            Token::StringLiteral(path) => (), 
+            actual => panic!("Expected: {:?} | Actual: {:?}", Token::StringLiteral(path), actual)
         }
     }
 }

@@ -1,5 +1,5 @@
 [package]
-name = "solidity-fix"
+name = "solfix"
 version = "0.1.0"
 authors = ["James Towle <jalextowle@gmail.com>"]
 edition = "2018"

@@ -37,7 +37,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "solidity-fix"
+name = "solfix"
 version = "0.1.0"
 dependencies = [
  "regex 1.1.6 (registry+https://github.com/rust-lang/crates.io-index)",

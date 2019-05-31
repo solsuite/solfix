@@ -2,13 +2,13 @@ use super::lex_4_25;
 
 #[derive(Debug)]
 pub struct ParseTree {
-    children: Vec<ParseNode>
+    pub children: Vec<ParseNode>
 }
 
 #[derive(Clone, Debug)]
 pub struct ParseNode {
-    node: lex_4_25::Token,
-    children: Vec<Box<ParseNode>>
+    pub node: lex_4_25::Token,
+    pub children: Vec<Box<ParseNode>>
 }
 
 /* Methods */
@@ -161,6 +161,104 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: ParseNode) -> Parse
     let mut result = ParseNode{ node: lex_4_25::Token::NoMatch, children: vec![] };
     let mut peek = lex_4_25::peek_token(&chars, cur);
     match peek {
+        lex_4_25::Token::Decrement | lex_4_25::Token::Increment => {
+            result.node = lex_4_25::next_token(&chars, cur);
+            result.children.push(Box::new(left));
+            return parse_operation(&chars, cur, result);
+        }
+        lex_4_25::Token::OpenBracket => {
+            result.node = lex_4_25::next_token(&chars, cur);
+            result.children.push(Box::new(left));
+            let mut right = parse_expression(&chars, cur);
+            match right.node {
+                lex_4_25::Token::OpenBracket         |
+                lex_4_25::Token::Dot                 |
+                lex_4_25::Token::Power               |
+                lex_4_25::Token::Divide              |
+                lex_4_25::Token::Minus               |
+                lex_4_25::Token::Modulus             |
+                lex_4_25::Token::Multiply            |
+                lex_4_25::Token::Plus                |
+                lex_4_25::Token::ShiftLeft           |
+                lex_4_25::Token::ShiftRight          |
+                lex_4_25::Token::BitwiseAnd          |
+                lex_4_25::Token::BitwiseXor          |
+                lex_4_25::Token::BitwiseOr           |
+                lex_4_25::Token::GreaterThan         |
+                lex_4_25::Token::GreaterThanOrEquals |
+                lex_4_25::Token::LessThan            |
+                lex_4_25::Token::LessThanOrEquals    |
+                lex_4_25::Token::Equals              |
+                lex_4_25::Token::NotEquals           |
+                lex_4_25::Token::LogicalAnd          |
+                lex_4_25::Token::LogicalOr           |
+                lex_4_25::Token::Set                 |
+                lex_4_25::Token::OrEquals            |
+                lex_4_25::Token::XorEquals           |
+                lex_4_25::Token::AndEquals           |
+                lex_4_25::Token::ShiftLeftEquals     |
+                lex_4_25::Token::ShiftRightEquals    |
+                lex_4_25::Token::PlusEquals          |
+                lex_4_25::Token::MinusEquals         |
+                lex_4_25::Token::MultiplyEquals      |
+                lex_4_25::Token::DivideEquals        |
+                lex_4_25::Token::ModEquals => result = result.merge_expressions(right), 
+                _ => result.children.push(Box::new(right))
+            }
+            match lex_4_25::next_token(&chars, cur) {
+                lex_4_25::Token::CloseBracket => return parse_operation(&chars, cur, result),
+                _ => panic!("Invalid array access")
+            }
+        }
+        lex_4_25::Token::Dot => {
+            result.node = lex_4_25::next_token(&chars, cur); 
+            result.children.push(Box::new(left));
+            let mut right = lex_4_25::next_token(&chars, cur);
+            match right {
+                id @ lex_4_25::Token::Identifier(..) => result.add_child(id),
+                _ => panic!("Invalid member access")
+            }
+            return parse_operation(&chars, cur, result);
+        }
+        lex_4_25::Token::OpenParenthesis => {
+            result.node = lex_4_25::Token::Function;
+            result.children.push(Box::new(left));
+            result.children.push(Box::new(parse_function_call_arguments(&chars, cur)));
+            let mut right = parse_expression(&chars, cur);
+            match right.node {
+                lex_4_25::Token::Power               |
+                lex_4_25::Token::Divide              |
+                lex_4_25::Token::Minus               |
+                lex_4_25::Token::Modulus             |
+                lex_4_25::Token::Multiply            |
+                lex_4_25::Token::Plus                |
+                lex_4_25::Token::ShiftLeft           |
+                lex_4_25::Token::ShiftRight          |
+                lex_4_25::Token::BitwiseAnd          |
+                lex_4_25::Token::BitwiseXor          |
+                lex_4_25::Token::BitwiseOr           |
+                lex_4_25::Token::GreaterThan         |
+                lex_4_25::Token::GreaterThanOrEquals |
+                lex_4_25::Token::LessThan            |
+                lex_4_25::Token::LessThanOrEquals    |
+                lex_4_25::Token::Equals              |
+                lex_4_25::Token::NotEquals           |
+                lex_4_25::Token::LogicalAnd          |
+                lex_4_25::Token::LogicalOr           |
+                lex_4_25::Token::Set                 |
+                lex_4_25::Token::OrEquals            |
+                lex_4_25::Token::XorEquals           |
+                lex_4_25::Token::AndEquals           |
+                lex_4_25::Token::ShiftLeftEquals     |
+                lex_4_25::Token::ShiftRightEquals    |
+                lex_4_25::Token::PlusEquals          |
+                lex_4_25::Token::MinusEquals         |
+                lex_4_25::Token::MultiplyEquals      |
+                lex_4_25::Token::DivideEquals        |
+                lex_4_25::Token::ModEquals => result = result.merge_expressions(right), 
+                _ => result.children.push(Box::new(right))
+            }
+        }
         lex_4_25::Token::Power => {
             result.node = lex_4_25::next_token(&chars, cur);
             result.children.push(Box::new(left));
@@ -241,7 +339,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: ParseNode) -> Parse
         lex_4_25::Token::Plus | lex_4_25::Token::Minus => {
             result.node = lex_4_25::next_token(&chars, cur); 
             result.children.push(Box::new(left));
-            let mut right = parse_expression(&chars, cur);
+            let right = parse_expression(&chars, cur);
             match right.node {
                 lex_4_25::Token::Minus               |
                 lex_4_25::Token::Plus                |
@@ -275,7 +373,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: ParseNode) -> Parse
         lex_4_25::Token::ShiftLeft | lex_4_25::Token::ShiftRight => {
             result.node = lex_4_25::next_token(&chars, cur);
             result.children.push(Box::new(left));
-            let mut right = parse_expression(&chars, cur);
+            let right = parse_expression(&chars, cur);
             match right.node {
                 lex_4_25::Token::ShiftLeft           |
                 lex_4_25::Token::ShiftRight          |
@@ -307,7 +405,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: ParseNode) -> Parse
         lex_4_25::Token::BitwiseAnd => {
             result.node = lex_4_25::next_token(&chars, cur);
             result.children.push(Box::new(left));
-            let mut right = parse_expression(&chars, cur);
+            let right = parse_expression(&chars, cur);
             match right.node {
                 lex_4_25::Token::BitwiseAnd          |
                 lex_4_25::Token::BitwiseXor          |
@@ -337,7 +435,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: ParseNode) -> Parse
         lex_4_25::Token::BitwiseXor => {
             result.node = lex_4_25::next_token(&chars, cur);
             result.children.push(Box::new(left));
-            let mut right = parse_expression(&chars, cur);
+            let right = parse_expression(&chars, cur);
             match right.node {
                 lex_4_25::Token::BitwiseXor          |
                 lex_4_25::Token::BitwiseOr           |
@@ -366,7 +464,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: ParseNode) -> Parse
         lex_4_25::Token::BitwiseOr => {
             result.node = lex_4_25::next_token(&chars, cur);
             result.children.push(Box::new(left));
-            let mut right = parse_expression(&chars, cur);
+            let right = parse_expression(&chars, cur);
             match right.node {
                 lex_4_25::Token::BitwiseXor          |
                 lex_4_25::Token::BitwiseOr           |
@@ -398,7 +496,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: ParseNode) -> Parse
         lex_4_25::Token::LessThanOrEquals => {
             result.node = lex_4_25::next_token(&chars, cur);
             result.children.push(Box::new(left));
-            let mut right = parse_expression(&chars, cur);
+            let right = parse_expression(&chars, cur);
             match right.node {
                 lex_4_25::Token::GreaterThan         |
                 lex_4_25::Token::GreaterThanOrEquals |
@@ -425,7 +523,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: ParseNode) -> Parse
         lex_4_25::Token::Equals | lex_4_25::Token::NotEquals => {
             result.node = lex_4_25::next_token(&chars, cur);
             result.children.push(Box::new(left));
-            let mut right = parse_expression(&chars, cur);
+            let right = parse_expression(&chars, cur);
             match right.node {
                 lex_4_25::Token::Equals              |
                 lex_4_25::Token::NotEquals           |
@@ -448,7 +546,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: ParseNode) -> Parse
         lex_4_25::Token::LogicalAnd | lex_4_25::Token::LogicalOr => {
             result.node = lex_4_25::next_token(&chars, cur);
             result.children.push(Box::new(left));
-            let mut right = parse_expression(&chars, cur);
+            let right = parse_expression(&chars, cur);
             match right.node {
                 lex_4_25::Token::LogicalOr           | 
                 lex_4_25::Token::Set                 |
@@ -468,7 +566,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: ParseNode) -> Parse
         lex_4_25::Token::Question | lex_4_25::Token::Colon => {
             result.node = lex_4_25::next_token(&chars, cur);
             result.children.push(Box::new(left));
-            let mut right = parse_expression(&chars, cur);
+            let right = parse_expression(&chars, cur);
             match right.node {
                 lex_4_25::Token::Question            |
                 lex_4_25::Token::Colon               |
@@ -499,7 +597,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: ParseNode) -> Parse
         lex_4_25::Token::DivideEquals => {
             result.node = lex_4_25::next_token(&chars, cur);
             result.children.push(Box::new(left));
-            let mut right = parse_expression(&chars, cur);
+            let right = parse_expression(&chars, cur);
             match right.node {
                 lex_4_25::Token::Set                 |
                 lex_4_25::Token::OrEquals            |
@@ -515,20 +613,66 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: ParseNode) -> Parse
                 _ => result.children.push(Box::new(right))
             }
         }
-        // TODO
-        lex_4_25::Token::Dot => {
-            result.node = lex_4_25::next_token(&chars, cur); 
-            result.children.push(Box::new(left));
-            result.children.push(Box::new(parse_expression(&chars, cur)));
-        }
         _ => {
-            result.node = left.node;
+            result = left;
         }
     }
     result
 }
 
-fn parse_expression(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
+fn parse_function_call_arguments(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
+    let result;
+    let mut next = lex_4_25::next_token(&chars, cur);
+    match next {
+        lex_4_25::Token::OpenParenthesis => (),
+        _ => panic!("Invalid function call")
+    }
+    next = lex_4_25::peek_token(&chars, cur);
+    match next {
+        lex_4_25::Token::OpenBrace => {
+            lex_4_25::next_token(&chars, cur);
+            result = parse_name_value_list(&chars, cur);
+            match lex_4_25::next_token(&chars, cur) {
+                lex_4_25::Token::CloseBrace => (),
+                _ => panic!("Invalid function call")
+            }
+        }
+        _ => result = parse_expression_list(&chars, cur)
+    }
+    match lex_4_25::next_token(&chars, cur) {
+        lex_4_25::Token::CloseParenthesis => return result,
+        _ => panic!("Invalid function call")
+    }
+}
+
+fn parse_name_value_list(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
+    let mut result = ParseNode{ node: lex_4_25::Token::OpenBrace, children: vec![] };
+    let mut stop = false;
+    while !stop {
+        let mut child = ParseNode { node: lex_4_25::Token::Colon, children: vec![] };
+        match lex_4_25::peek_token(&chars, cur) {
+            lex_4_25::Token::Identifier(..) => {
+                child.add_child(lex_4_25::next_token(&chars, cur));
+            }
+            _ => stop = true
+        }
+        if !stop {
+            match lex_4_25::next_token(&chars, cur) {
+                lex_4_25::Token::Colon => (),
+                _ => panic!("Invalid name value list")
+            }
+            child.children.push(Box::new(parse_expression(&chars, cur)));
+            match lex_4_25::peek_token(&chars, cur) {
+                lex_4_25::Token::Comma => (),
+                _ => stop = true
+            }
+            result.children.push(Box::new(child));
+        }
+    }
+    result
+}
+
+pub fn parse_expression(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
     let mut result = ParseNode{ node: lex_4_25::Token::NoMatch, children: vec![] };
     let mut peek = lex_4_25::peek_token(&chars, cur);
     match peek {
@@ -585,283 +729,28 @@ fn parse_expression(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
     result
 }
 
+fn parse_expression_list(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
+    let mut result = ParseNode{ node: lex_4_25::Token::OpenParenthesis, children: vec![] };
+    let mut stop = false;
+    while !stop {
+        let returned = parse_expression(&chars, cur);
+        match returned.node {
+            lex_4_25::Token::NoMatch => stop = true,
+            _ => result.children.push(Box::new(returned))
+        }
+        if !stop {
+            if let lex_4_25::Token::Comma = lex_4_25::peek_token(&chars, cur) {
+                lex_4_25::next_token(&chars, cur);
+            } else {
+                stop = true;
+            }
+        }
+    }
+    result
+}
+
 /*** Types ***/
 
 fn parse_type_name(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
     ParseNode{ node: lex_4_25::Token::NoMatch, children: vec![] }
-}
-
-/*** Tests ***/
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    /* Expressions */
-
-    #[test]
-    fn addition_parsing_test() {
-        let addition = String::from("1500 + 0x000").chars().collect::<Vec<char>>();
-        let cur = &mut 0;
-        let node = parse_expression(&addition, cur);
-        match node.node {
-            lex_4_25::Token::Plus => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::Plus, actual)
-        }
-        assert_eq!(node.children.len(), 2);
-        let left = String::from("1500");
-        let right = String::from("0x000");
-        match &node.children[0].node {
-            lex_4_25::Token::DecimalNumber(left) => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::DecimalNumber(left), actual)
-        }
-        match &node.children[1].node {
-            lex_4_25::Token::HexNumber(right) => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::HexNumber(right), actual)
-        }
-    }
-
-    #[test]
-    fn multiplication_parsing_test() {
-        let multiplication = String::from("1500 * 0x000").chars().collect::<Vec<char>>();
-        let cur = &mut 0;
-        let node = parse_expression(&multiplication, cur);
-        match node.node {
-            lex_4_25::Token::Multiply => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::Multiply, actual)
-        }
-        assert_eq!(node.children.len(), 2);
-        assert_eq!(node.children[0].children.len(), 0);
-        assert_eq!(node.children[1].children.len(), 0);
-        let left = String::from("1500");
-        let right = String::from("0x000");
-        match &node.children[0].node {
-            lex_4_25::Token::DecimalNumber(left) => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::DecimalNumber(left), actual)
-        }
-        match &node.children[1].node {
-            lex_4_25::Token::HexNumber(right) => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::HexNumber(right), actual)
-        }
-    }
-
-    #[test]
-    fn arithmetic_parsing_test1() {
-        let multiplication = String::from("(800 + 1500) * 0x000").chars().collect::<Vec<char>>();
-        let cur = &mut 0;
-        let node = parse_expression(&multiplication, cur);
-        println!("{:?}", node);
-        match node.node {
-            lex_4_25::Token::Multiply => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::Multiply, actual)
-        }
-        assert_eq!(node.children.len(), 2);
-        assert_eq!(node.children[0].children.len(), 2);
-        assert_eq!(node.children[1].children.len(), 0);
-        let inner_left = String::from("800");
-        let inner_right = String::from("1500");
-        let right = String::from("0x000");
-        match &node.children[0].node {
-            lex_4_25::Token::Plus => {
-                match &node.children[0].children[0].node {
-                    lex_4_25::Token::DecimalNumber(inner_left) => (),
-                    actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::DecimalNumber(inner_left), actual)
-                }
-                match &node.children[0].children[1].node {
-                    lex_4_25::Token::DecimalNumber(inner_right) => (),
-                    actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::DecimalNumber(inner_right), actual)
-                }
-            }
-            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::Plus, actual)
-        }
-        match &node.children[1].node {
-            lex_4_25::Token::HexNumber(right) => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::HexNumber(right), actual)
-        }
-    }
-
-    #[test]
-    fn arithmetic_parsing_test2() {
-        let multiplication = String::from("800 + 1500 * 0x000").chars().collect::<Vec<char>>();
-        let cur = &mut 0;
-        let node = parse_expression(&multiplication, cur);
-        match node.node {
-            lex_4_25::Token::Plus => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::Plus, actual)
-        }
-        assert_eq!(node.children.len(), 2);
-        assert_eq!(node.children[0].children.len(), 0);
-        assert_eq!(node.children[1].children.len(), 2);
-        let left = String::from("800");
-        let inner_left = String::from("1500");
-        let inner_right = String::from("0x000");
-        match &node.children[0].node {
-            lex_4_25::Token::DecimalNumber(inner_left) => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::DecimalNumber(left), actual)
-        }
-        match &node.children[1].node {
-            lex_4_25::Token::Multiply => {
-                match &node.children[1].children[0].node {
-                    lex_4_25::Token::DecimalNumber(inner_left) => (),
-                    actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::DecimalNumber(inner_left), actual)
-                }
-                match &node.children[1].children[1].node {
-                    lex_4_25::Token::HexNumber(inner_right) => (),
-                    actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::HexNumber(inner_right), actual)
-                }
-            }
-            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::Multiply, actual)
-        }
-    }
-
-    #[test]
-    fn arithmetic_parsing_test3() {
-        let arithmetic = String::from("800 * 1500 + 0x000").chars().collect::<Vec<char>>();
-        let cur = &mut 0;
-        let node = parse_expression(&arithmetic, cur);
-        match node.node {
-            lex_4_25::Token::Plus => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::Plus, actual)
-        }
-        assert_eq!(node.children.len(), 2);
-        assert_eq!(node.children[0].children.len(), 2);
-        assert_eq!(node.children[1].children.len(), 0);
-        let inner_left = String::from("800");
-        let inner_right = String::from("1500");
-        let right = String::from("0x000");
-        match &node.children[0].node {
-            lex_4_25::Token::Multiply => {
-                match &node.children[0].children[0].node {
-                    lex_4_25::Token::DecimalNumber(inner_left) => (),
-                    actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::DecimalNumber(inner_left), actual)
-                }
-                match &node.children[0].children[1].node {
-                    lex_4_25::Token::DecimalNumber(inner_right) => (),
-                    actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::HexNumber(inner_right), actual)
-                }
-            }
-            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::Multiply, actual)
-        }
-        match &node.children[1].node {
-            lex_4_25::Token::HexNumber(right) => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::DecimalNumber(right), actual)
-        }
-    }
-
-    #[test]
-    fn arithmetic_parsing_test4() {
-        let arithmetic = String::from("800 * 1500 + 0x000 * 0x800").chars().collect::<Vec<char>>();
-        let cur = &mut 0;
-        let node = parse_expression(&arithmetic, cur);
-        match node.node {
-            lex_4_25::Token::Plus => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::Plus, actual)
-        }
-        assert_eq!(node.children.len(), 2);
-        assert_eq!(node.children[0].children.len(), 2);
-        assert_eq!(node.children[1].children.len(), 2);
-        let left_left = String::from("800");
-        let left_right = String::from("1500");
-        let right_left = String::from("0x000");
-        let right_right = String::from("0x800");
-        match &node.children[0].node {
-            lex_4_25::Token::Multiply => {
-                match &node.children[0].children[0].node {
-                    lex_4_25::Token::DecimalNumber(left_left) => (),
-                    actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::DecimalNumber(left_left), actual)
-                }
-                match &node.children[0].children[1].node {
-                    lex_4_25::Token::DecimalNumber(left_right) => (),
-                    actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::HexNumber(left_right), actual)
-                }
-            }
-            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::Multiply, actual)
-        }
-        match &node.children[1].node {
-            lex_4_25::Token::Multiply => {
-                match &node.children[1].children[0].node {
-                    lex_4_25::Token::HexNumber(right_left) => (),
-                    actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::DecimalNumber(right_left), actual)
-                }
-                match &node.children[1].children[1].node {
-                    lex_4_25::Token::HexNumber(right_right) => (),
-                    actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::HexNumber(right_right), actual)
-                }
-            }
-            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::Multiply, actual)
-        }
-    }
-
-    #[test]
-    fn arithmetic_parsing_test5() {
-        let arithmetic = String::from("1 - 800 * 1500 + 0x000 * 0x800 / 5 ** 1800").chars().collect::<Vec<char>>();
-        let cur = &mut 0;
-        let node = parse_expression(&arithmetic, cur);
-        match node.node {
-            lex_4_25::Token::Plus => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::Plus, actual)
-        }
-        assert_eq!(node.children.len(), 2);
-        assert_eq!(node.children[0].children.len(), 2);
-        assert_eq!(node.children[1].children.len(), 2);
-        match &node.children[0].node {
-            lex_4_25::Token::Minus => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::Multiply, actual)
-        }
-        match &node.children[1].node {
-            lex_4_25::Token::Divide => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::Divide, actual)
-        }
-        let one = String::from("1");
-        match &node.children[0].children[0].node {
-            lex_4_25::Token::DecimalNumber(one) => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::DecimalNumber(one), actual)
-        }
-        match &node.children[0].children[1].node {
-            lex_4_25::Token::Multiply => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::Multiply, actual)
-        }
-        match &node.children[1].children[0].node {
-            lex_4_25::Token::Multiply => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::Multiply, actual)
-        }
-        match &node.children[1].children[1].node {
-            lex_4_25::Token::Power => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::Power, actual)
-        }
-        assert_eq!(node.children[0].children[0].children.len(), 0);
-        assert_eq!(node.children[0].children[1].children.len(), 2);
-        assert_eq!(node.children[1].children[0].children.len(), 2);
-        assert_eq!(node.children[1].children[1].children.len(), 2);
-        let eight_hundred = String::from("800");
-        match &node.children[0].children[1].children[0].node {
-            lex_4_25::Token::DecimalNumber(eight_hundred) => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::DecimalNumber(eight_hundred), actual)
-        }
-        let one_thousand_five_hundred = String::from("1500");
-        match &node.children[0].children[1].children[1].node {
-            lex_4_25::Token::DecimalNumber(one_thousand_five_hundred) => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::DecimalNumber(one_thousand_five_hundred), actual)
-        }
-        let zero = String::from("0x000");
-        match &node.children[1].children[0].children[0].node {
-            lex_4_25::Token::HexNumber(zero) => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::HexNumber(zero), actual)
-        }
-        let two_thousand_forty_eight = String::from("0x800");
-        match &node.children[1].children[0].children[1].node {
-            lex_4_25::Token::HexNumber(two_thousand_forty_eight) => (),
-            actual => panic!("expected: {:?} | actual: {:?}", lex_4_25::Token::HexNumber(two_thousand_forty_eight), actual)
-        }
-        let five = String::from("5");
-        match &node.children[1].children[1].children[0].node {
-            lex_4_25::Token::DecimalNumber(five) => (),
-            actual => panic!("expected: {:?} | actual: {:?}", lex_4_25::Token::DecimalNumber(five), actual)
-        }
-        let one_thousand_eight_hundred = String::from("1800");
-        match &node.children[1].children[1].children[1].node {
-            lex_4_25::Token::DecimalNumber(one_thousand_eight_hundred) => (),
-            actual => panic!("expected: {:?} | actual: {:?}", lex_4_25::Token::DecimalNumber(one_thousand_eight_hundred), actual)
-        }
-    }
 }
