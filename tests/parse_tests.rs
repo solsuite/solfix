@@ -3,7 +3,7 @@ extern crate solfix;
 #[cfg(test)]
 mod parser_tests {
     use solfix::lex_4_25;
-    use solfix::parse_4_25::{parse_expression, ParseNode};
+    use solfix::parse_4_25::parse_expression;
 
     #[test]
     fn addition_parsing_test() {
@@ -18,11 +18,11 @@ mod parser_tests {
         let left = String::from("1500");
         let right = String::from("0x000");
         match &node.children[0].node {
-            lex_4_25::Token::DecimalNumber(left) => (),
+            lex_4_25::Token::DecimalNumber(..) => (),
             actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::DecimalNumber(left), actual)
         }
         match &node.children[1].node {
-            lex_4_25::Token::HexNumber(right) => (),
+            lex_4_25::Token::HexNumber(..) => (),
             actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::HexNumber(right), actual)
         }
     }
@@ -42,11 +42,11 @@ mod parser_tests {
         let left = String::from("1500");
         let right = String::from("0x000");
         match &node.children[0].node {
-            lex_4_25::Token::DecimalNumber(left) => (),
+            lex_4_25::Token::DecimalNumber(..) => (),
             actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::DecimalNumber(left), actual)
         }
         match &node.children[1].node {
-            lex_4_25::Token::HexNumber(right) => (),
+            lex_4_25::Token::HexNumber(..) => (),
             actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::HexNumber(right), actual)
         }
     }
@@ -70,18 +70,18 @@ mod parser_tests {
         match &node.children[0].node {
             lex_4_25::Token::Plus => {
                 match &node.children[0].children[0].node {
-                    lex_4_25::Token::DecimalNumber(inner_left) => (),
+                    lex_4_25::Token::DecimalNumber(..) => (),
                     actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::DecimalNumber(inner_left), actual)
                 }
                 match &node.children[0].children[1].node {
-                    lex_4_25::Token::DecimalNumber(inner_right) => (),
+                    lex_4_25::Token::DecimalNumber(..) => (),
                     actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::DecimalNumber(inner_right), actual)
                 }
             }
             actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::Plus, actual)
         }
         match &node.children[1].node {
-            lex_4_25::Token::HexNumber(right) => (),
+            lex_4_25::Token::HexNumber(..) => (),
             actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::HexNumber(right), actual)
         }
     }
@@ -102,17 +102,17 @@ mod parser_tests {
         let inner_left = String::from("1500");
         let inner_right = String::from("0x000");
         match &node.children[0].node {
-            lex_4_25::Token::DecimalNumber(inner_left) => (),
+            lex_4_25::Token::DecimalNumber(..) => (),
             actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::DecimalNumber(left), actual)
         }
         match &node.children[1].node {
             lex_4_25::Token::Multiply => {
                 match &node.children[1].children[0].node {
-                    lex_4_25::Token::DecimalNumber(inner_left) => (),
+                    lex_4_25::Token::DecimalNumber(..) => (),
                     actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::DecimalNumber(inner_left), actual)
                 }
                 match &node.children[1].children[1].node {
-                    lex_4_25::Token::HexNumber(inner_right) => (),
+                    lex_4_25::Token::HexNumber(..) => (),
                     actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::HexNumber(inner_right), actual)
                 }
             }
@@ -138,18 +138,18 @@ mod parser_tests {
         match &node.children[0].node {
             lex_4_25::Token::Multiply => {
                 match &node.children[0].children[0].node {
-                    lex_4_25::Token::DecimalNumber(inner_left) => (),
+                    lex_4_25::Token::DecimalNumber(..) => (),
                     actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::DecimalNumber(inner_left), actual)
                 }
                 match &node.children[0].children[1].node {
-                    lex_4_25::Token::DecimalNumber(inner_right) => (),
+                    lex_4_25::Token::DecimalNumber(..) => (),
                     actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::HexNumber(inner_right), actual)
                 }
             }
             actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::Multiply, actual)
         }
         match &node.children[1].node {
-            lex_4_25::Token::HexNumber(right) => (),
+            lex_4_25::Token::HexNumber(..) => (),
             actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::DecimalNumber(right), actual)
         }
     }
@@ -173,11 +173,11 @@ mod parser_tests {
         match &node.children[0].node {
             lex_4_25::Token::Multiply => {
                 match &node.children[0].children[0].node {
-                    lex_4_25::Token::DecimalNumber(left_left) => (),
+                    lex_4_25::Token::DecimalNumber(..) => (),
                     actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::DecimalNumber(left_left), actual)
                 }
                 match &node.children[0].children[1].node {
-                    lex_4_25::Token::DecimalNumber(left_right) => (),
+                    lex_4_25::Token::DecimalNumber(..) => (),
                     actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::HexNumber(left_right), actual)
                 }
             }
@@ -186,11 +186,11 @@ mod parser_tests {
         match &node.children[1].node {
             lex_4_25::Token::Multiply => {
                 match &node.children[1].children[0].node {
-                    lex_4_25::Token::HexNumber(right_left) => (),
+                    lex_4_25::Token::HexNumber(..) => (),
                     actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::DecimalNumber(right_left), actual)
                 }
                 match &node.children[1].children[1].node {
-                    lex_4_25::Token::HexNumber(right_right) => (),
+                    lex_4_25::Token::HexNumber(..) => (),
                     actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::HexNumber(right_right), actual)
                 }
             }
@@ -220,7 +220,7 @@ mod parser_tests {
         }
         let one = String::from("1");
         match &node.children[0].children[0].node {
-            lex_4_25::Token::DecimalNumber(one) => (),
+            lex_4_25::Token::DecimalNumber(..) => (),
             actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::DecimalNumber(one), actual)
         }
         match &node.children[0].children[1].node {
@@ -241,32 +241,32 @@ mod parser_tests {
         assert_eq!(node.children[1].children[1].children.len(), 2);
         let eight_hundred = String::from("800");
         match &node.children[0].children[1].children[0].node {
-            lex_4_25::Token::DecimalNumber(eight_hundred) => (),
+            lex_4_25::Token::DecimalNumber(..) => (),
             actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::DecimalNumber(eight_hundred), actual)
         }
         let one_thousand_five_hundred = String::from("1500");
         match &node.children[0].children[1].children[1].node {
-            lex_4_25::Token::DecimalNumber(one_thousand_five_hundred) => (),
+            lex_4_25::Token::DecimalNumber(..) => (),
             actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::DecimalNumber(one_thousand_five_hundred), actual)
         }
         let zero = String::from("0x000");
         match &node.children[1].children[0].children[0].node {
-            lex_4_25::Token::HexNumber(zero) => (),
+            lex_4_25::Token::HexNumber(..) => (),
             actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::HexNumber(zero), actual)
         }
         let two_thousand_forty_eight = String::from("0x800");
         match &node.children[1].children[0].children[1].node {
-            lex_4_25::Token::HexNumber(two_thousand_forty_eight) => (),
+            lex_4_25::Token::HexNumber(..) => (),
             actual => panic!("expected: {:?} | actual: {:?}", lex_4_25::Token::HexNumber(two_thousand_forty_eight), actual)
         }
         let five = String::from("5");
         match &node.children[1].children[1].children[0].node {
-            lex_4_25::Token::DecimalNumber(five) => (),
+            lex_4_25::Token::DecimalNumber(..) => (),
             actual => panic!("expected: {:?} | actual: {:?}", lex_4_25::Token::DecimalNumber(five), actual)
         }
         let one_thousand_eight_hundred = String::from("1800");
         match &node.children[1].children[1].children[1].node {
-            lex_4_25::Token::DecimalNumber(one_thousand_eight_hundred) => (),
+            lex_4_25::Token::DecimalNumber(..) => (),
             actual => panic!("expected: {:?} | actual: {:?}", lex_4_25::Token::DecimalNumber(one_thousand_eight_hundred), actual)
         }
     }

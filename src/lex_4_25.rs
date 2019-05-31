@@ -541,13 +541,13 @@ fn match_collected(collected: String) -> Token {
         hex if hex_re.is_match(hex) => Token::HexNumber(hex.to_string()),
         num if decimal_re.is_match(num) => Token::DecimalNumber(num.to_string()),
         hex if hex_literal_re.is_match(hex) => Token::HexLiteral(hex.to_string()),
-        string if string_literal_re.is_match(string) => Token::StringLiteral(string.to_string()),
         version if version_re.is_match(version) => Token::Version(version.to_string()),
         none => Token::NoMatch
     }
 }
 
 pub fn next_token(line: &Vec<char>, cur: &mut usize) -> Token {
+    let mut string = false;
     let mut collected = String::new();
     while *cur < line.len() {
         if collected.len() == 0 {
@@ -593,11 +593,21 @@ pub fn next_token(line: &Vec<char>, cur: &mut usize) -> Token {
             } else if line[*cur] == '^' {
                 *cur += 1;
                 return Token::BitwiseXor;
+            } else if line[*cur] == '\"' {
+                collected.push(line[*cur]);
+                string = true;
             } else if !line[*cur].is_whitespace() {
                 collected.push(line[*cur]);
             }
         } else {
-            if line[*cur] == '*' && collected == "*" {
+            if string {
+                if line[*cur] == '\"' {
+                    collected.push('\"');
+                    return Token::StringLiteral(collected);
+                } else {
+                    collected.push(line[*cur]);
+                }
+            } else if line[*cur] == '*' && collected == "*" {
                 *cur += 1;
                 return Token::Power;
             } else if line[*cur] == '=' && collected == "=" {
@@ -692,8 +702,10 @@ pub fn next_token(line: &Vec<char>, cur: &mut usize) -> Token {
                line[*cur] == '>' ||
                line[*cur] == '<' ||
                line[*cur] == '!' ||
-               line[*cur] == '.'
+               line[*cur] == '.' 
             {
+                println!("1");
+                println!("{}", line[*cur]);
                 return match_collected(collected);
             } else {
                 collected.push(line[*cur]);
@@ -701,6 +713,7 @@ pub fn next_token(line: &Vec<char>, cur: &mut usize) -> Token {
         }
         *cur += 1;
     }
+    println!("2");
     match_collected(collected)
 }
 
@@ -718,7 +731,31 @@ mod tests {
     /* String Literal */
 
     #[test]
-    fn string_literal_test() {
+    fn string_literal_test1() {
+        let path = String::from("\"\"");
+        let chars = path.chars().collect::<Vec<char>>();
+        let cur = &mut 0; 
+        let actual = next_token(&chars, cur);
+        match actual {
+            Token::StringLiteral(path) => (), 
+            actual => panic!("Expected: {:?} | Actual: {:?}", Token::StringLiteral(path), actual)
+        }
+    }
+
+    #[test]
+    fn string_literal_test2() {
+        let path = String::from("\"test_file\"");
+        let chars = path.chars().collect::<Vec<char>>();
+        let cur = &mut 0; 
+        let actual = next_token(&chars, cur);
+        match actual {
+            Token::StringLiteral(path) => (), 
+            actual => panic!("Expected: {:?} | Actual: {:?}", Token::StringLiteral(path), actual)
+        }
+    }
+
+    #[test]
+    fn string_literal_test3() {
         let path = String::from("\"test_file.sol\"");
         let chars = path.chars().collect::<Vec<char>>();
         let cur = &mut 0; 
