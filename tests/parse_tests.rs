@@ -97,9 +97,19 @@ mod parse_tests {
         assert_eq!(tree.children[0].children[1].children.len(), 0);
         assert_eq!(tree.children[0].children[2].children.len(), 1);
         match &tree.children[0].children[2].children[0].node {
+            lex_4_25::Token::OpenParenthesis => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::OpenParenthesis, actual)
+        }
+        assert_eq!(tree.children[0].children[2].children[0].children.len(), 1);
+        match &tree.children[0].children[2].children[0].children[0].node {
+            lex_4_25::Token::Dot => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::Dot, actual)
+        }
+        assert_eq!(tree.children[0].children[2].children[0].children[0].children.len(), 1);
+        match &tree.children[0].children[2].children[0].children[0].children[0].node {
             lex_4_25::Token::Identifier(contract) => assert_eq!(contract, &"A"),
             actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::Identifier("A".to_string()), actual)
         }
-        assert_eq!(tree.children[0].children[2].children[0].children.len(), 0);
+        assert_eq!(tree.children[0].children[2].children[0].children[0].children[0].children.len(), 0);
     }
 }

@@ -11,7 +11,6 @@ pub struct ParseNode {
     pub children: Vec<Box<ParseNode>>
 }
 
-/* Methods */
 impl ParseNode {
     fn add_child(&mut self, token: lex_4_25::Token) { 
         self.children.push(Box::new(ParseNode{ node: token, children: vec![] })); 
@@ -41,6 +40,8 @@ impl lex_4_25::Token {
     }
 }
 
+/*** Top-Level ***/
+
 pub fn parse(input: String) -> ParseTree {
     let current_node = &mut ParseNode::empty();
     let mut tree = ParseTree{ children: vec![] };
@@ -68,14 +69,13 @@ pub fn parse(input: String) -> ParseTree {
                 current_node.node = lex_4_25::Token::Interface;
                 parse_contract(input_chars, cur);
             }
-            _ => {
-                // TODO: Add the below when everything is implemented
-                /* panic!("Invalid top level expression: {:?}", none) */
-            }
+            _ => panic!("Invalid top level expression")
         }
     }
     tree
 }
+
+/*** Pragma ***/
 
 pub fn parse_pragma(chars: &Vec<char>, cur: &mut usize) -> ParseNode { 
     let mut result = ParseNode::empty();
@@ -109,9 +109,14 @@ pub fn parse_pragma(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
     result
 } 
 
+/*** Import ***/
+
 fn parse_import(chars: &Vec<char>, cur: &mut usize) -> ParseNode { ParseNode::empty() }
 
-fn parse_contract(chars: &Vec<char>, cur: &mut usize) -> ParseNode { 
+/*** Contract ***/
+
+fn parse_contract(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
+    let mut is = false;
     let mut result = ParseNode::empty();
     match lex_4_25::next_token(&chars, cur) {
         lex_4_25::Token::Contract => result.node = lex_4_25::Token::Contract,
@@ -123,11 +128,44 @@ fn parse_contract(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
     }
     match lex_4_25::next_token(&chars, cur) {
         lex_4_25::Token::OpenBrace => result.add_child(lex_4_25::Token::OpenBrace),
+        lex_4_25::Token::Is => is = true,
         _ => panic!("Invalid contract definition")
+    }
+    if is {
+        let mut stop = false;
+        let mut is_node = lex_4_25::Token::Is.to_leaf(); 
+        while !stop {
+            is_node.children.push(Box::new(parse_inheritance_specifier(chars, cur)));
+            if let lex_4_25::Token::Comma = lex_4_25::peek_token(chars, cur) {
+                lex_4_25::next_token(chars, cur);
+            } else {
+                stop = true;
+            }
+        }
+        if let lex_4_25::Token::OpenBrace = lex_4_25::next_token(chars, cur) {
+            result.add_child(lex_4_25::Token::OpenBrace);
+            result.children.push(Box::new(is_node));
+        } else {
+            panic!("Invalid contract definition")
+        }
     }
     match lex_4_25::next_token(&chars, cur) {
         lex_4_25::Token::CloseBrace => (),
         _ => panic!("Invalid contract definition")
+    }
+    result
+}
+
+fn parse_inheritance_specifier(chars: &Vec<char>, cur: &mut usize) -> ParseNode { 
+    let mut result = lex_4_25::Token::OpenParenthesis.to_leaf();
+    result.children.push(Box::new(parse_user_defined_type_name(chars, cur)));
+    if let lex_4_25::Token::OpenParenthesis = lex_4_25::peek_token(chars, cur) {
+        lex_4_25::next_token(chars, cur);
+        result.children.push(Box::new(parse_expression_list(chars, cur)));
+        match lex_4_25::next_token(chars, cur) {
+            lex_4_25::Token::CloseParenthesis => (),
+            _ => panic!("Invalid inheritance specifier")
+        }
     }
     result
 }
@@ -707,7 +745,7 @@ pub fn parse_expression(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
 }
 
 fn parse_expression_list(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
-    let mut result = ParseNode{ node: lex_4_25::Token::OpenParenthesis, children: vec![] };
+    let mut result = lex_4_25::Token::OpenParenthesis.to_leaf();
     let mut stop = false;
     while !stop {
         let returned = parse_expression(&chars, cur);
@@ -730,4 +768,23 @@ fn parse_expression_list(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
 
 fn parse_type_name(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
     ParseNode{ node: lex_4_25::Token::NoMatch, children: vec![] }
+}
+
+fn parse_user_defined_type_name(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
+    let mut result = lex_4_25::Token::Dot.to_leaf();
+    let mut stop = false;
+    while !stop {
+        match lex_4_25::next_token(chars, cur) {
+            id @ lex_4_25::Token::Identifier(..) => result.add_child(id),
+            _ => panic!("Invalid user defined type name")
+        }
+        if !stop {
+            if let lex_4_25::Token::Comma = lex_4_25::peek_token(&chars, cur) {
+                lex_4_25::next_token(&chars, cur);
+            } else {
+                stop = true;
+            }
+        }
+    }
+    result
 }
