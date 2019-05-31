@@ -112,4 +112,98 @@ mod parse_tests {
         }
         assert_eq!(tree.children[0].children[2].children[0].children[0].children[0].children.len(), 0);
     }
+
+    #[test]
+    fn contract_enum_test1() { 
+        let tree = parse(String::from("contract Enum { enum Foo { } }"));
+        assert_eq!(tree.children.len(), 1);
+        match &tree.children[0].node {
+            lex_4_25::Token::Contract => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::Contract, actual)
+        }
+        assert_eq!(tree.children[0].children.len(), 2);
+        match &tree.children[0].children[0].node {
+            lex_4_25::Token::Identifier(contract) => assert_eq!(contract, &"Enum"),
+            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::Identifier("Enum".to_string()), actual)
+        }
+        match &tree.children[0].children[1].node {
+            lex_4_25::Token::OpenBrace => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::OpenBrace, actual)
+        }
+        assert_eq!(tree.children[0].children[0].children.len(), 0);
+        assert_eq!(tree.children[0].children[1].children.len(), 1);
+        match &tree.children[0].children[1].children[0].node {
+            lex_4_25::Token::Enum => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::Enum, actual)
+        }
+        assert_eq!(tree.children[0].children[1].children[0].children.len(), 2);
+        match &tree.children[0].children[1].children[0].children[0].node {
+            lex_4_25::Token::Identifier(foo) => assert_eq!(foo, &"Foo"),
+            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::Identifier("Foo".to_string()), actual)
+        }
+        match &tree.children[0].children[1].children[0].children[1].node {
+            lex_4_25::Token::OpenBrace => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::OpenBrace, actual)
+        }
+        assert_eq!(tree.children[0].children[1].children[0].children[0].children.len(), 0);
+        assert_eq!(tree.children[0].children[1].children[0].children[1].children.len(), 0);
+    }
+
+    #[test]
+    fn contract_enum_test2() { 
+        let tree = parse(String::from("contract Enum { enum Foo { Bar, Baz } }"));
+        assert_eq!(tree.children.len(), 1);
+        match &tree.children[0].node {
+            lex_4_25::Token::Contract => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::Contract, actual)
+        }
+        assert_eq!(tree.children[0].children.len(), 2);
+        match &tree.children[0].children[0].node {
+            lex_4_25::Token::Identifier(contract) => assert_eq!(contract, &"Enum"),
+            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::Identifier("Enum".to_string()), actual)
+        }
+        match &tree.children[0].children[1].node {
+            lex_4_25::Token::OpenBrace => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::OpenBrace, actual)
+        }
+        assert_eq!(tree.children[0].children[0].children.len(), 0);
+        assert_eq!(tree.children[0].children[1].children.len(), 1);
+        match &tree.children[0].children[1].children[0].node {
+            lex_4_25::Token::Enum => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::Enum, actual)
+        }
+        assert_eq!(tree.children[0].children[1].children[0].children.len(), 2);
+        match &tree.children[0].children[1].children[0].children[0].node {
+            lex_4_25::Token::Identifier(foo) => assert_eq!(foo, &"Foo"),
+            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::Identifier("Foo".to_string()), actual)
+        }
+        match &tree.children[0].children[1].children[0].children[1].node {
+            lex_4_25::Token::OpenBrace => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::OpenBrace, actual)
+        }
+        assert_eq!(tree.children[0].children[1].children[0].children[0].children.len(), 0);
+        assert_eq!(tree.children[0].children[1].children[0].children[1].children.len(), 2);
+        match &tree.children[0].children[1].children[0].children[1].children[0].node {
+            lex_4_25::Token::Identifier(bar) => assert_eq!(bar, &"Bar"),
+            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::Identifier("Bar".to_string()), actual)
+        }
+        match &tree.children[0].children[1].children[0].children[1].children[1].node {
+            lex_4_25::Token::Identifier(baz) => assert_eq!(baz, &"Baz"),
+            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::Identifier("Baz".to_string()), actual)
+        }
+        assert_eq!(tree.children[0].children[1].children[0].children[1].children[0].children.len(), 0);
+        assert_eq!(tree.children[0].children[1].children[0].children[1].children[1].children.len(), 0);
+    }
+
+    #[test]
+    fn contract_event_test1() { }
+
+    #[test]
+    fn contract_function_test1() { }
+
+    #[test]
+    fn contract_modifier_test1() { }
+
+    #[test]
+    fn contract_using_for_test1() { }
 }

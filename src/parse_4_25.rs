@@ -118,15 +118,15 @@ fn parse_import(chars: &Vec<char>, cur: &mut usize) -> ParseNode { ParseNode::em
 fn parse_contract(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
     let mut is = false;
     let mut result = ParseNode::empty();
-    match lex_4_25::next_token(&chars, cur) {
+    match lex_4_25::next_token(chars, cur) {
         lex_4_25::Token::Contract => result.node = lex_4_25::Token::Contract,
         _ => panic!("Invalid contract definition")
     }
-    match lex_4_25::next_token(&chars, cur) {
+    match lex_4_25::next_token(chars, cur) {
         id@lex_4_25::Token::Identifier(..) => result.add_child(id),
         _ => panic!("Invalid contract definition")
     }
-    match lex_4_25::next_token(&chars, cur) {
+    match lex_4_25::next_token(chars, cur) {
         lex_4_25::Token::OpenBrace => result.add_child(lex_4_25::Token::OpenBrace),
         lex_4_25::Token::Is => is = true,
         _ => panic!("Invalid contract definition")
@@ -149,9 +149,49 @@ fn parse_contract(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
             panic!("Invalid contract definition")
         }
     }
-    match lex_4_25::next_token(&chars, cur) {
+    match lex_4_25::peek_token(chars, cur) {
+        lex_4_25::Token::Enum => result.children[1].children.push(Box::new(parse_enum_definition(chars, cur))),
         lex_4_25::Token::CloseBrace => (),
         _ => panic!("Invalid contract definition")
+    }
+    match lex_4_25::next_token(chars, cur) {
+        lex_4_25::Token::CloseBrace => (),
+        _ => panic!("Invalid contract definition")
+    }
+    result
+}
+
+fn parse_enum_definition(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
+    let mut result = lex_4_25::Token::Enum.to_leaf();
+    match lex_4_25::next_token(chars, cur) {
+        lex_4_25::Token::Enum => (),
+        _ => panic!("Invalid enum definition")
+    }
+    match lex_4_25::next_token(chars, cur) {
+        id @ lex_4_25::Token::Identifier(..) => result.add_child(id),
+        _ => panic!("Invalid enum definition")
+    }
+    match lex_4_25::next_token(chars, cur) {
+        lex_4_25::Token::OpenBrace => result.add_child(lex_4_25::Token::OpenBrace),
+        _ => panic!("Invalid enum definition")
+    }
+    let mut stop = false;
+    while !stop {
+        match lex_4_25::peek_token(chars, cur) {
+            lex_4_25::Token::Identifier(..) => result.children[1].add_child(lex_4_25::next_token(chars, cur)),
+            _ => stop = true
+        }
+        if !stop {
+            if let lex_4_25::Token::Comma = lex_4_25::peek_token(chars, cur) {
+                lex_4_25::next_token(chars, cur);
+            } else {
+                stop = true;
+            }
+        }
+    }
+    match lex_4_25::next_token(chars, cur) {
+        lex_4_25::Token::CloseBrace => (),
+        _ => panic!("Invalid enum definition")
     }
     result
 }
