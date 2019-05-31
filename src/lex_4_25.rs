@@ -704,8 +704,6 @@ pub fn next_token(line: &Vec<char>, cur: &mut usize) -> Token {
                line[*cur] == '!' ||
                line[*cur] == '.' 
             {
-                println!("1");
-                println!("{}", line[*cur]);
                 return match_collected(collected);
             } else {
                 collected.push(line[*cur]);
@@ -713,7 +711,6 @@ pub fn next_token(line: &Vec<char>, cur: &mut usize) -> Token {
         }
         *cur += 1;
     }
-    println!("2");
     match_collected(collected)
 }
 

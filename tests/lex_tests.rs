@@ -15,7 +15,7 @@ mod lexer_tests {
             actual => panic!("Expected {:?}, Actual {:?}", lex_4_25::Token::Contract, actual)
         }
         match lex_4_25::next_token(&chars, cur) {
-            lex_4_25::Token::Identifier(a) => (),
+            lex_4_25::Token::Identifier(..) => (),
             actual => panic!("Expected {:?}, Actual {:?}", lex_4_25::Token::Identifier(a), actual)
         }
         match lex_4_25::next_token(&chars, cur) {
@@ -23,7 +23,7 @@ mod lexer_tests {
             actual => panic!("Expected {:?}, Actual {:?}", lex_4_25::Token::Plus, actual)
         }
         match lex_4_25::next_token(&chars, cur) {
-            lex_4_25::Token::Identifier(b) => (),
+            lex_4_25::Token::Identifier(..) => (),
             actual => panic!("Expected {:?}, Actual {:?}", lex_4_25::Token::Identifier(b), actual)
         }
         match lex_4_25::next_token(&chars, cur) {
@@ -59,7 +59,7 @@ mod lexer_tests {
             actual => panic!("Expected {:?}, Actual {:?}", lex_4_25::Token::OpenParenthesis, actual)
         }
         match lex_4_25::next_token(&chars, cur) {
-            lex_4_25::Token::Identifier(a) => (),
+            lex_4_25::Token::Identifier(..) => (),
             actual => panic!("Expected {:?}, Actual {:?}", lex_4_25::Token::Identifier(a), actual)
         }
         match lex_4_25::next_token(&chars, cur) {

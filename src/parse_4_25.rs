@@ -256,6 +256,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: ParseNode) -> Parse
                 lex_4_25::Token::MultiplyEquals      |
                 lex_4_25::Token::DivideEquals        |
                 lex_4_25::Token::ModEquals => result = result.merge_expressions(right), 
+                lex_4_25::Token::NoMatch => (),
                 _ => result.children.push(Box::new(right))
             }
         }
