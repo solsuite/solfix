@@ -83,7 +83,6 @@ pub fn parse_pragma(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
         lex_4_25::Token::Pragma => result.node = lex_4_25::Token::Pragma,
         _ => panic!("Invalid pragma declaration")
     }
-
     match lex_4_25::next_token(chars, cur) {
         lex_4_25::Token::Identifier(name) => {
             if name != "solidity" {
@@ -806,8 +805,20 @@ fn parse_expression_list(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
 
 /*** Types ***/
 
-fn parse_type_name(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
-    ParseNode{ node: lex_4_25::Token::NoMatch, children: vec![] }
+pub fn parse_type_name(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
+    return match lex_4_25::peek_token(chars, cur) {
+        lex_4_25::Token::Identifier(..) => parse_user_defined_type_name(chars, cur),
+        lex_4_25::Token::Mapping => parse_mapping(chars, cur),
+        lex_4_25::Token::Function => parse_function_type_name(chars, cur),
+        elementary => {
+            if elementary.is_elementary_type() {
+                lex_4_25::next_token(chars, cur);
+                elementary.to_leaf()
+            } else {
+                panic!("Invalid type name")
+            }
+        }
+    }
 }
 
 fn parse_user_defined_type_name(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
@@ -819,7 +830,7 @@ fn parse_user_defined_type_name(chars: &Vec<char>, cur: &mut usize) -> ParseNode
             _ => panic!("Invalid user defined type name")
         }
         if !stop {
-            if let lex_4_25::Token::Comma = lex_4_25::peek_token(&chars, cur) {
+            if let lex_4_25::Token::Dot = lex_4_25::peek_token(&chars, cur) {
                 lex_4_25::next_token(&chars, cur);
             } else {
                 stop = true;
@@ -828,3 +839,35 @@ fn parse_user_defined_type_name(chars: &Vec<char>, cur: &mut usize) -> ParseNode
     }
     result
 }
+
+fn parse_mapping(chars: &Vec<char>, cur: &mut usize) -> ParseNode { 
+    let mut result = lex_4_25::Token::Mapping.to_leaf();
+    match lex_4_25::next_token(chars, cur) {
+        lex_4_25::Token::Mapping => (),
+        _ => panic!("1 Invalid mapping")
+    }
+    match lex_4_25::next_token(chars, cur) {
+        lex_4_25::Token::OpenParenthesis => (),
+        _ => panic!("2 Invalid mapping")
+    }
+    let elementary = lex_4_25::next_token(chars, cur);
+    if elementary.is_elementary_type() {
+        result.add_child(elementary);
+    } else {
+        panic!("3 Invalid mapping");
+    }
+    match lex_4_25::next_token(chars, cur) {
+        lex_4_25::Token::Arrow => (),
+        _ => panic!("4 Invalid mapping")
+    }
+    result.children.push(Box::new(parse_type_name(chars, cur)));
+    match lex_4_25::next_token(chars, cur) {
+        lex_4_25::Token::CloseParenthesis => (),
+        actual => panic!("5 Invalid mapping: actual: {:?}", actual)
+    }
+    result
+}
+
+fn parse_function_type_name(chars: &Vec<char>, cur: &mut usize) -> ParseNode { ParseNode::empty() }
+
+fn parse_array_type_name(chars: &Vec<char>, cur: &mut usize) -> ParseNode { ParseNode::empty() }

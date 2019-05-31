@@ -5,6 +5,7 @@ pub enum Token {
     Address,
     AndEquals,
     Anonymous,
+    Arrow,
     As,
     Assembly,
     BitwiseAnd,
@@ -367,6 +368,39 @@ impl Token {
     }
 }
 
+trait StopToken {
+    fn is_stop_token(self) -> bool;
+}
+
+impl StopToken for char {
+    fn is_stop_token(self) -> bool {
+        if self.is_whitespace() ||
+           self == ';' ||
+           self == '{' ||
+           self == '}' ||
+           self == '(' ||
+           self == ')' ||
+           self == '[' ||
+           self == ']' ||
+           self == ',' ||
+           self == ':' ||
+           self == '!' ||
+           self == '~' ||
+           self == '*' ||
+           self == '/' ||
+           self == '+' ||
+           self == '-' ||
+           self == '=' ||
+           self == '>' ||
+           self == '<' ||
+           self == '!' ||
+           self == '.' {
+            return true;
+       }
+       return false; 
+    }
+}
+
 fn match_collected(collected: String) -> Token {
     let decimal_re = Regex::new(r"^[0-9]+(\.[0-9]*)?([eE][0-9]+)?$").unwrap();
     let id_re = Regex::new(r"^[a-zA-Z\$_][a-zA-Z0-9\$_]*$").unwrap();
@@ -607,6 +641,9 @@ pub fn next_token(line: &Vec<char>, cur: &mut usize) -> Token {
                collected.push('.');
             } else if line[*cur] == '0' && collected == "^" {
                collected.push('0');
+            } else if line[*cur] == '>' && collected == "=" {
+                *cur += 1;
+                return Token::Arrow;
             } else if line[*cur] == '*' && collected == "*" {
                 *cur += 1;
                 return Token::Power;
@@ -683,28 +720,7 @@ pub fn next_token(line: &Vec<char>, cur: &mut usize) -> Token {
                 return Token::GreaterThan;
             } else if collected == "*" {
                 return Token::Multiply;
-            } else if line[*cur].is_whitespace() ||
-               line[*cur] == ';' ||
-               line[*cur] == '{' ||
-               line[*cur] == '}' ||
-               line[*cur] == '(' ||
-               line[*cur] == ')' ||
-               line[*cur] == '[' ||
-               line[*cur] == ']' ||
-               line[*cur] == ',' ||
-               line[*cur] == ':' ||
-               line[*cur] == '!' ||
-               line[*cur] == '~' ||
-               line[*cur] == '*' ||
-               line[*cur] == '/' ||
-               line[*cur] == '+' ||
-               line[*cur] == '-' ||
-               line[*cur] == '=' ||
-               line[*cur] == '>' ||
-               line[*cur] == '<' ||
-               line[*cur] == '!' ||
-               line[*cur] == '.'
-            {
+            } else if line[*cur].is_stop_token() {
                 return match_collected(collected);
             } else {
                 collected.push(line[*cur]);
