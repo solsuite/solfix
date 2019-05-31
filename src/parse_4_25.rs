@@ -162,8 +162,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: ParseNode) -> Parse
     let mut peek = lex_4_25::peek_token(&chars, cur);
     match peek {
         lex_4_25::Token::Power => {
-            lex_4_25::next_token(&chars, cur);
-            result.node = lex_4_25::Token::Power;
+            result.node = lex_4_25::next_token(&chars, cur);
             result.children.push(Box::new(left));
             let mut right = parse_expression(&chars, cur);
             match right.node {
@@ -200,85 +199,10 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: ParseNode) -> Parse
                 _ => result.children.push(Box::new(right))
             }
         }
-        lex_4_25::Token::Divide => {
-            lex_4_25::next_token(&chars, cur);
-            result.node = lex_4_25::Token::Divide; 
-            result.children.push(Box::new(left));
-            let mut right = parse_expression(&chars, cur);
-            match right.node {
-                lex_4_25::Token::Divide              |
-                lex_4_25::Token::Minus               |
-                lex_4_25::Token::Modulus             |
-                lex_4_25::Token::Multiply            |
-                lex_4_25::Token::Plus                |
-                lex_4_25::Token::ShiftLeft           |
-                lex_4_25::Token::ShiftRight          |
-                lex_4_25::Token::BitwiseAnd          |
-                lex_4_25::Token::BitwiseXor          |
-                lex_4_25::Token::BitwiseOr           |
-                lex_4_25::Token::GreaterThan         |
-                lex_4_25::Token::GreaterThanOrEquals |
-                lex_4_25::Token::LessThan            |
-                lex_4_25::Token::LessThanOrEquals    |
-                lex_4_25::Token::Equals              |
-                lex_4_25::Token::NotEquals           |
-                lex_4_25::Token::LogicalAnd          |
-                lex_4_25::Token::LogicalOr           |
-                lex_4_25::Token::Set                 |
-                lex_4_25::Token::OrEquals            |
-                lex_4_25::Token::XorEquals           |
-                lex_4_25::Token::AndEquals           |
-                lex_4_25::Token::ShiftLeftEquals     |
-                lex_4_25::Token::ShiftRightEquals    |
-                lex_4_25::Token::PlusEquals          |
-                lex_4_25::Token::MinusEquals         |
-                lex_4_25::Token::MultiplyEquals      |
-                lex_4_25::Token::DivideEquals        |
-                lex_4_25::Token::ModEquals => result = result.merge_expressions(right), 
-                _ => result.children.push(Box::new(right))
-            }
-        }
-        lex_4_25::Token::Multiply => {
-            lex_4_25::next_token(&chars, cur);
-            result.node = lex_4_25::Token::Multiply; 
-            result.children.push(Box::new(left));
-            let mut right = parse_expression(&chars, cur);
-            match right.node {
-                lex_4_25::Token::Divide              |
-                lex_4_25::Token::Minus               |
-                lex_4_25::Token::Modulus             |
-                lex_4_25::Token::Multiply            |
-                lex_4_25::Token::Plus                |
-                lex_4_25::Token::ShiftLeft           |
-                lex_4_25::Token::ShiftRight          |
-                lex_4_25::Token::BitwiseAnd          |
-                lex_4_25::Token::BitwiseXor          |
-                lex_4_25::Token::BitwiseOr           |
-                lex_4_25::Token::GreaterThan         |
-                lex_4_25::Token::GreaterThanOrEquals |
-                lex_4_25::Token::LessThan            |
-                lex_4_25::Token::LessThanOrEquals    |
-                lex_4_25::Token::Equals              |
-                lex_4_25::Token::NotEquals           |
-                lex_4_25::Token::LogicalAnd          |
-                lex_4_25::Token::LogicalOr           |
-                lex_4_25::Token::Set                 |
-                lex_4_25::Token::OrEquals            |
-                lex_4_25::Token::XorEquals           |
-                lex_4_25::Token::AndEquals           |
-                lex_4_25::Token::ShiftLeftEquals     |
-                lex_4_25::Token::ShiftRightEquals    |
-                lex_4_25::Token::PlusEquals          |
-                lex_4_25::Token::MinusEquals         |
-                lex_4_25::Token::MultiplyEquals      |
-                lex_4_25::Token::DivideEquals        |
-                lex_4_25::Token::ModEquals => result = result.merge_expressions(right), 
-                _ => result.children.push(Box::new(right))
-            }
-        }
+        lex_4_25::Token::Divide   |
+        lex_4_25::Token::Multiply | 
         lex_4_25::Token::Modulus => {
-            lex_4_25::next_token(&chars, cur);
-            result.node = lex_4_25::Token::Modulus; 
+            result.node = lex_4_25::next_token(&chars, cur);
             result.children.push(Box::new(left));
             let mut right = parse_expression(&chars, cur);
             match right.node {
@@ -314,9 +238,8 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: ParseNode) -> Parse
                 _ => result.children.push(Box::new(right))
             }
         }
-        lex_4_25::Token::Plus => {
-            lex_4_25::next_token(&chars, cur);
-            result.node = lex_4_25::Token::Plus; 
+        lex_4_25::Token::Plus | lex_4_25::Token::Minus => {
+            result.node = lex_4_25::next_token(&chars, cur); 
             result.children.push(Box::new(left));
             let mut right = parse_expression(&chars, cur);
             match right.node {
@@ -349,77 +272,8 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: ParseNode) -> Parse
                 _ => result.children.push(Box::new(right))
             }
         }
-        lex_4_25::Token::Minus => {
-            lex_4_25::next_token(&chars, cur);
-            result.node = lex_4_25::Token::Minus; 
-            result.children.push(Box::new(left));
-            let mut right = parse_expression(&chars, cur);
-            match right.node {
-                lex_4_25::Token::Minus               |
-                lex_4_25::Token::Plus                |
-                lex_4_25::Token::ShiftLeft           |
-                lex_4_25::Token::ShiftRight          |
-                lex_4_25::Token::BitwiseAnd          |
-                lex_4_25::Token::BitwiseXor          |
-                lex_4_25::Token::BitwiseOr           |
-                lex_4_25::Token::GreaterThan         |
-                lex_4_25::Token::GreaterThanOrEquals |
-                lex_4_25::Token::LessThan            |
-                lex_4_25::Token::LessThanOrEquals    |
-                lex_4_25::Token::Equals              |
-                lex_4_25::Token::NotEquals           |
-                lex_4_25::Token::LogicalAnd          |
-                lex_4_25::Token::LogicalOr           |
-                lex_4_25::Token::Set                 |
-                lex_4_25::Token::OrEquals            |
-                lex_4_25::Token::XorEquals           |
-                lex_4_25::Token::AndEquals           |
-                lex_4_25::Token::ShiftLeftEquals     |
-                lex_4_25::Token::ShiftRightEquals    |
-                lex_4_25::Token::PlusEquals          |
-                lex_4_25::Token::MinusEquals         |
-                lex_4_25::Token::MultiplyEquals      |
-                lex_4_25::Token::DivideEquals        |
-                lex_4_25::Token::ModEquals => result = result.merge_expressions(right), 
-                _ => result.children.push(Box::new(right))
-            }
-        }
-        lex_4_25::Token::ShiftLeft => {
-            lex_4_25::next_token(&chars, cur);
-            result.node = lex_4_25::Token::ShiftLeft;
-            result.children.push(Box::new(left));
-            let mut right = parse_expression(&chars, cur);
-            match right.node {
-                lex_4_25::Token::ShiftLeft           |
-                lex_4_25::Token::ShiftRight          |
-                lex_4_25::Token::BitwiseAnd          |
-                lex_4_25::Token::BitwiseXor          |
-                lex_4_25::Token::BitwiseOr           |
-                lex_4_25::Token::GreaterThan         |
-                lex_4_25::Token::GreaterThanOrEquals |
-                lex_4_25::Token::LessThan            |
-                lex_4_25::Token::LessThanOrEquals    |
-                lex_4_25::Token::Equals              |
-                lex_4_25::Token::NotEquals           |
-                lex_4_25::Token::LogicalAnd          |
-                lex_4_25::Token::LogicalOr           |
-                lex_4_25::Token::Set                 |
-                lex_4_25::Token::OrEquals            |
-                lex_4_25::Token::XorEquals           |
-                lex_4_25::Token::AndEquals           |
-                lex_4_25::Token::ShiftLeftEquals     |
-                lex_4_25::Token::ShiftRightEquals    |
-                lex_4_25::Token::PlusEquals          |
-                lex_4_25::Token::MinusEquals         |
-                lex_4_25::Token::MultiplyEquals      |
-                lex_4_25::Token::DivideEquals        |
-                lex_4_25::Token::ModEquals => result = result.merge_expressions(right), 
-                _ => result.children.push(Box::new(right))
-            }
-        }
-        lex_4_25::Token::ShiftRight => {
-            lex_4_25::next_token(&chars, cur);
-            result.node = lex_4_25::Token::ShiftRight;
+        lex_4_25::Token::ShiftLeft | lex_4_25::Token::ShiftRight => {
+            result.node = lex_4_25::next_token(&chars, cur);
             result.children.push(Box::new(left));
             let mut right = parse_expression(&chars, cur);
             match right.node {
@@ -451,8 +305,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: ParseNode) -> Parse
             }
         }
         lex_4_25::Token::BitwiseAnd => {
-            lex_4_25::next_token(&chars, cur);
-            result.node = lex_4_25::Token::BitwiseAnd;
+            result.node = lex_4_25::next_token(&chars, cur);
             result.children.push(Box::new(left));
             let mut right = parse_expression(&chars, cur);
             match right.node {
@@ -482,8 +335,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: ParseNode) -> Parse
             }
         }
         lex_4_25::Token::BitwiseXor => {
-            lex_4_25::next_token(&chars, cur);
-            result.node = lex_4_25::Token::BitwiseXor;
+            result.node = lex_4_25::next_token(&chars, cur);
             result.children.push(Box::new(left));
             let mut right = parse_expression(&chars, cur);
             match right.node {
@@ -512,8 +364,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: ParseNode) -> Parse
             }
         }
         lex_4_25::Token::BitwiseOr => {
-            lex_4_25::next_token(&chars, cur);
-            result.node = lex_4_25::Token::BitwiseOr;
+            result.node = lex_4_25::next_token(&chars, cur);
             result.children.push(Box::new(left));
             let mut right = parse_expression(&chars, cur);
             match right.node {
@@ -541,93 +392,11 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: ParseNode) -> Parse
                 _ => result.children.push(Box::new(right))
             }
         }
-        lex_4_25::Token::GreaterThan => {
-            lex_4_25::next_token(&chars, cur);
-            result.node = lex_4_25::Token::GreaterThan;
-            result.children.push(Box::new(left));
-            let mut right = parse_expression(&chars, cur);
-            match right.node {
-                lex_4_25::Token::GreaterThan         |
-                lex_4_25::Token::GreaterThanOrEquals |
-                lex_4_25::Token::LessThan            |
-                lex_4_25::Token::LessThanOrEquals    |
-                lex_4_25::Token::Equals              |
-                lex_4_25::Token::NotEquals           |
-                lex_4_25::Token::LogicalAnd          |
-                lex_4_25::Token::LogicalOr           |
-                lex_4_25::Token::Set                 |
-                lex_4_25::Token::OrEquals            |
-                lex_4_25::Token::XorEquals           |
-                lex_4_25::Token::AndEquals           |
-                lex_4_25::Token::ShiftLeftEquals     |
-                lex_4_25::Token::ShiftRightEquals    |
-                lex_4_25::Token::PlusEquals          |
-                lex_4_25::Token::MinusEquals         |
-                lex_4_25::Token::MultiplyEquals      |
-                lex_4_25::Token::DivideEquals        |
-                lex_4_25::Token::ModEquals => result = result.merge_expressions(right), 
-                _ => result.children.push(Box::new(right))
-            }
-        }
-        lex_4_25::Token::LessThan => {
-            lex_4_25::next_token(&chars, cur);
-            result.node = lex_4_25::Token::LessThan;
-            result.children.push(Box::new(left));
-            let mut right = parse_expression(&chars, cur);
-            match right.node {
-                lex_4_25::Token::GreaterThan         |
-                lex_4_25::Token::GreaterThanOrEquals |
-                lex_4_25::Token::LessThan            |
-                lex_4_25::Token::LessThanOrEquals    |
-                lex_4_25::Token::Equals              |
-                lex_4_25::Token::NotEquals           |
-                lex_4_25::Token::LogicalAnd          |
-                lex_4_25::Token::LogicalOr           |
-                lex_4_25::Token::Set                 |
-                lex_4_25::Token::OrEquals            |
-                lex_4_25::Token::XorEquals           |
-                lex_4_25::Token::AndEquals           |
-                lex_4_25::Token::ShiftLeftEquals     |
-                lex_4_25::Token::ShiftRightEquals    |
-                lex_4_25::Token::PlusEquals          |
-                lex_4_25::Token::MinusEquals         |
-                lex_4_25::Token::MultiplyEquals      |
-                lex_4_25::Token::DivideEquals        |
-                lex_4_25::Token::ModEquals => result = result.merge_expressions(right), 
-                _ => result.children.push(Box::new(right))
-            }
-        }
-        lex_4_25::Token::GreaterThanOrEquals => {
-            lex_4_25::next_token(&chars, cur);
-            result.node = lex_4_25::Token::GreaterThanOrEquals;
-            result.children.push(Box::new(left));
-            let mut right = parse_expression(&chars, cur);
-            match right.node {
-                lex_4_25::Token::GreaterThan         |
-                lex_4_25::Token::GreaterThanOrEquals |
-                lex_4_25::Token::LessThan            |
-                lex_4_25::Token::LessThanOrEquals    |
-                lex_4_25::Token::Equals              |
-                lex_4_25::Token::NotEquals           |
-                lex_4_25::Token::LogicalAnd          |
-                lex_4_25::Token::LogicalOr           |
-                lex_4_25::Token::Set                 |
-                lex_4_25::Token::OrEquals            |
-                lex_4_25::Token::XorEquals           |
-                lex_4_25::Token::AndEquals           |
-                lex_4_25::Token::ShiftLeftEquals     |
-                lex_4_25::Token::ShiftRightEquals    |
-                lex_4_25::Token::PlusEquals          |
-                lex_4_25::Token::MinusEquals         |
-                lex_4_25::Token::MultiplyEquals      |
-                lex_4_25::Token::DivideEquals        |
-                lex_4_25::Token::ModEquals => result = result.merge_expressions(right), 
-                _ => result.children.push(Box::new(right))
-            }
-        }
+        lex_4_25::Token::GreaterThan         |
+        lex_4_25::Token::LessThan            |
+        lex_4_25::Token::GreaterThanOrEquals |
         lex_4_25::Token::LessThanOrEquals => {
-            lex_4_25::next_token(&chars, cur);
-            result.node = lex_4_25::Token::LessThanOrEquals;
+            result.node = lex_4_25::next_token(&chars, cur);
             result.children.push(Box::new(left));
             let mut right = parse_expression(&chars, cur);
             match right.node {
@@ -653,9 +422,8 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: ParseNode) -> Parse
                 _ => result.children.push(Box::new(right))
             }
         }
-        lex_4_25::Token::Equals => {
-            lex_4_25::next_token(&chars, cur);
-            result.node = lex_4_25::Token::Equals;
+        lex_4_25::Token::Equals | lex_4_25::Token::NotEquals => {
+            result.node = lex_4_25::next_token(&chars, cur);
             result.children.push(Box::new(left));
             let mut right = parse_expression(&chars, cur);
             match right.node {
@@ -677,55 +445,8 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: ParseNode) -> Parse
                 _ => result.children.push(Box::new(right))
             }
         }
-        lex_4_25::Token::NotEquals => {
-            lex_4_25::next_token(&chars, cur);
-            result.node = lex_4_25::Token::NotEquals;
-            result.children.push(Box::new(left));
-            let mut right = parse_expression(&chars, cur);
-            match right.node {
-                lex_4_25::Token::Equals              |
-                lex_4_25::Token::NotEquals           |
-                lex_4_25::Token::LogicalAnd          |
-                lex_4_25::Token::LogicalOr           |
-                lex_4_25::Token::Set                 |
-                lex_4_25::Token::OrEquals            |
-                lex_4_25::Token::XorEquals           |
-                lex_4_25::Token::AndEquals           |
-                lex_4_25::Token::ShiftLeftEquals     |
-                lex_4_25::Token::ShiftRightEquals    |
-                lex_4_25::Token::PlusEquals          |
-                lex_4_25::Token::MinusEquals         |
-                lex_4_25::Token::MultiplyEquals      |
-                lex_4_25::Token::DivideEquals        |
-                lex_4_25::Token::ModEquals => result = result.merge_expressions(right), 
-                _ => result.children.push(Box::new(right))
-            }
-        }
-        lex_4_25::Token::LogicalAnd => {
-            lex_4_25::next_token(&chars, cur);
-            result.node = lex_4_25::Token::LogicalAnd;
-            result.children.push(Box::new(left));
-            let mut right = parse_expression(&chars, cur);
-            match right.node {
-                lex_4_25::Token::LogicalAnd          |
-                lex_4_25::Token::LogicalOr           | 
-                lex_4_25::Token::Set                 |
-                lex_4_25::Token::OrEquals            |
-                lex_4_25::Token::XorEquals           |
-                lex_4_25::Token::AndEquals           |
-                lex_4_25::Token::ShiftLeftEquals     |
-                lex_4_25::Token::ShiftRightEquals    |
-                lex_4_25::Token::PlusEquals          |
-                lex_4_25::Token::MinusEquals         |
-                lex_4_25::Token::MultiplyEquals      |
-                lex_4_25::Token::DivideEquals        |
-                lex_4_25::Token::ModEquals => result = result.merge_expressions(right), 
-                _ => result.children.push(Box::new(right))
-            }
-        }
-        lex_4_25::Token::LogicalOr => {
-            lex_4_25::next_token(&chars, cur);
-            result.node = lex_4_25::Token::LogicalOr;
+        lex_4_25::Token::LogicalAnd | lex_4_25::Token::LogicalOr => {
+            result.node = lex_4_25::next_token(&chars, cur);
             result.children.push(Box::new(left));
             let mut right = parse_expression(&chars, cur);
             match right.node {
@@ -744,12 +465,13 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: ParseNode) -> Parse
                 _ => result.children.push(Box::new(right))
             }
         }
-        lex_4_25::Token::Set => {
-            lex_4_25::next_token(&chars, cur);
-            result.node = lex_4_25::Token::Set;
+        lex_4_25::Token::Question | lex_4_25::Token::Colon => {
+            result.node = lex_4_25::next_token(&chars, cur);
             result.children.push(Box::new(left));
             let mut right = parse_expression(&chars, cur);
             match right.node {
+                lex_4_25::Token::Question            |
+                lex_4_25::Token::Colon               |
                 lex_4_25::Token::Set                 |
                 lex_4_25::Token::OrEquals            |
                 lex_4_25::Token::XorEquals           |
@@ -764,189 +486,18 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: ParseNode) -> Parse
                 _ => result.children.push(Box::new(right))
             }
         }
-        lex_4_25::Token::OrEquals => {
-            lex_4_25::next_token(&chars, cur);
-            result.node = lex_4_25::Token::OrEquals;
-            result.children.push(Box::new(left));
-            let mut right = parse_expression(&chars, cur);
-            match right.node {
-                lex_4_25::Token::Set                 |
-                lex_4_25::Token::OrEquals            |
-                lex_4_25::Token::XorEquals           |
-                lex_4_25::Token::AndEquals           |
-                lex_4_25::Token::ShiftLeftEquals     |
-                lex_4_25::Token::ShiftRightEquals    |
-                lex_4_25::Token::PlusEquals          |
-                lex_4_25::Token::MinusEquals         |
-                lex_4_25::Token::MultiplyEquals      |
-                lex_4_25::Token::DivideEquals        |
-                lex_4_25::Token::ModEquals => result = result.merge_expressions(right), 
-                _ => result.children.push(Box::new(right))
-            }
-        }
-        lex_4_25::Token::XorEquals => {
-            lex_4_25::next_token(&chars, cur);
-            result.node = lex_4_25::Token::XorEquals;
-            result.children.push(Box::new(left));
-            let mut right = parse_expression(&chars, cur);
-            match right.node {
-                lex_4_25::Token::Set                 |
-                lex_4_25::Token::OrEquals            |
-                lex_4_25::Token::XorEquals           |
-                lex_4_25::Token::AndEquals           |
-                lex_4_25::Token::ShiftLeftEquals     |
-                lex_4_25::Token::ShiftRightEquals    |
-                lex_4_25::Token::PlusEquals          |
-                lex_4_25::Token::MinusEquals         |
-                lex_4_25::Token::MultiplyEquals      |
-                lex_4_25::Token::DivideEquals        |
-                lex_4_25::Token::ModEquals => result = result.merge_expressions(right), 
-                _ => result.children.push(Box::new(right))
-            }
-        }
-        lex_4_25::Token::AndEquals => {
-            lex_4_25::next_token(&chars, cur);
-            result.node = lex_4_25::Token::AndEquals;
-            result.children.push(Box::new(left));
-            let mut right = parse_expression(&chars, cur);
-            match right.node {
-                lex_4_25::Token::Set                 |
-                lex_4_25::Token::OrEquals            |
-                lex_4_25::Token::XorEquals           |
-                lex_4_25::Token::AndEquals           |
-                lex_4_25::Token::ShiftLeftEquals     |
-                lex_4_25::Token::ShiftRightEquals    |
-                lex_4_25::Token::PlusEquals          |
-                lex_4_25::Token::MinusEquals         |
-                lex_4_25::Token::MultiplyEquals      |
-                lex_4_25::Token::DivideEquals        |
-                lex_4_25::Token::ModEquals => result = result.merge_expressions(right), 
-                _ => result.children.push(Box::new(right))
-            }
-        }
-        lex_4_25::Token::ShiftLeftEquals => {
-            lex_4_25::next_token(&chars, cur);
-            result.node = lex_4_25::Token::ShiftLeftEquals;
-            result.children.push(Box::new(left));
-            let mut right = parse_expression(&chars, cur);
-            match right.node {
-                lex_4_25::Token::Set                 |
-                lex_4_25::Token::OrEquals            |
-                lex_4_25::Token::XorEquals           |
-                lex_4_25::Token::AndEquals           |
-                lex_4_25::Token::ShiftLeftEquals     |
-                lex_4_25::Token::ShiftRightEquals    |
-                lex_4_25::Token::PlusEquals          |
-                lex_4_25::Token::MinusEquals         |
-                lex_4_25::Token::MultiplyEquals      |
-                lex_4_25::Token::DivideEquals        |
-                lex_4_25::Token::ModEquals => result = result.merge_expressions(right), 
-                _ => result.children.push(Box::new(right))
-            }
-        }
-        lex_4_25::Token::ShiftRightEquals => {
-            lex_4_25::next_token(&chars, cur);
-            result.node = lex_4_25::Token::ShiftRightEquals;
-            result.children.push(Box::new(left));
-            let mut right = parse_expression(&chars, cur);
-            match right.node {
-                lex_4_25::Token::Set                 |
-                lex_4_25::Token::OrEquals            |
-                lex_4_25::Token::XorEquals           |
-                lex_4_25::Token::AndEquals           |
-                lex_4_25::Token::ShiftLeftEquals     |
-                lex_4_25::Token::ShiftRightEquals    |
-                lex_4_25::Token::PlusEquals          |
-                lex_4_25::Token::MinusEquals         |
-                lex_4_25::Token::MultiplyEquals      |
-                lex_4_25::Token::DivideEquals        |
-                lex_4_25::Token::ModEquals => result = result.merge_expressions(right), 
-                _ => result.children.push(Box::new(right))
-            }
-        }
-        lex_4_25::Token::PlusEquals => {
-            lex_4_25::next_token(&chars, cur);
-            result.node = lex_4_25::Token::PlusEquals;
-            result.children.push(Box::new(left));
-            let mut right = parse_expression(&chars, cur);
-            match right.node {
-                lex_4_25::Token::Set                 |
-                lex_4_25::Token::OrEquals            |
-                lex_4_25::Token::XorEquals           |
-                lex_4_25::Token::AndEquals           |
-                lex_4_25::Token::ShiftLeftEquals     |
-                lex_4_25::Token::ShiftRightEquals    |
-                lex_4_25::Token::PlusEquals          |
-                lex_4_25::Token::MinusEquals         |
-                lex_4_25::Token::MultiplyEquals      |
-                lex_4_25::Token::DivideEquals        |
-                lex_4_25::Token::ModEquals => result = result.merge_expressions(right), 
-                _ => result.children.push(Box::new(right))
-            }
-        }
-        lex_4_25::Token::MinusEquals => {
-            lex_4_25::next_token(&chars, cur);
-            result.node = lex_4_25::Token::MinusEquals;
-            result.children.push(Box::new(left));
-            let mut right = parse_expression(&chars, cur);
-            match right.node {
-                lex_4_25::Token::Set                 |
-                lex_4_25::Token::OrEquals            |
-                lex_4_25::Token::XorEquals           |
-                lex_4_25::Token::AndEquals           |
-                lex_4_25::Token::ShiftLeftEquals     |
-                lex_4_25::Token::ShiftRightEquals    |
-                lex_4_25::Token::PlusEquals          |
-                lex_4_25::Token::MinusEquals         |
-                lex_4_25::Token::MultiplyEquals      |
-                lex_4_25::Token::DivideEquals        |
-                lex_4_25::Token::ModEquals => result = result.merge_expressions(right), 
-                _ => result.children.push(Box::new(right))
-            }
-        }
-        lex_4_25::Token::ModEquals => {
-            lex_4_25::next_token(&chars, cur);
-            result.node = lex_4_25::Token::ModEquals;
-            result.children.push(Box::new(left));
-            let mut right = parse_expression(&chars, cur);
-            match right.node {
-                lex_4_25::Token::Set                 |
-                lex_4_25::Token::OrEquals            |
-                lex_4_25::Token::XorEquals           |
-                lex_4_25::Token::AndEquals           |
-                lex_4_25::Token::ShiftLeftEquals     |
-                lex_4_25::Token::ShiftRightEquals    |
-                lex_4_25::Token::PlusEquals          |
-                lex_4_25::Token::MinusEquals         |
-                lex_4_25::Token::MultiplyEquals      |
-                lex_4_25::Token::DivideEquals        |
-                lex_4_25::Token::ModEquals => result = result.merge_expressions(right), 
-                _ => result.children.push(Box::new(right))
-            }
-        }
-        lex_4_25::Token::MultiplyEquals => {
-            lex_4_25::next_token(&chars, cur);
-            result.node = lex_4_25::Token::MultiplyEquals;
-            result.children.push(Box::new(left));
-            let mut right = parse_expression(&chars, cur);
-            match right.node {
-                lex_4_25::Token::Set                 |
-                lex_4_25::Token::OrEquals            |
-                lex_4_25::Token::XorEquals           |
-                lex_4_25::Token::AndEquals           |
-                lex_4_25::Token::ShiftLeftEquals     |
-                lex_4_25::Token::ShiftRightEquals    |
-                lex_4_25::Token::PlusEquals          |
-                lex_4_25::Token::MinusEquals         |
-                lex_4_25::Token::MultiplyEquals      |
-                lex_4_25::Token::DivideEquals        |
-                lex_4_25::Token::ModEquals => result = result.merge_expressions(right), 
-                _ => result.children.push(Box::new(right))
-            }
-        }
+        lex_4_25::Token::Set              |
+        lex_4_25::Token::OrEquals         |
+        lex_4_25::Token::XorEquals        |
+        lex_4_25::Token::AndEquals        |
+        lex_4_25::Token::ShiftLeftEquals  |
+        lex_4_25::Token::ShiftRightEquals |
+        lex_4_25::Token::PlusEquals       |
+        lex_4_25::Token::MinusEquals      |
+        lex_4_25::Token::ModEquals        |
+        lex_4_25::Token::MultiplyEquals   |
         lex_4_25::Token::DivideEquals => {
-            lex_4_25::next_token(&chars, cur);
-            result.node = lex_4_25::Token::DivideEquals;
+            result.node = lex_4_25::next_token(&chars, cur);
             result.children.push(Box::new(left));
             let mut right = parse_expression(&chars, cur);
             match right.node {
@@ -966,8 +517,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: ParseNode) -> Parse
         }
         // TODO
         lex_4_25::Token::Dot => {
-            lex_4_25::next_token(&chars, cur);
-            result.node = lex_4_25::Token::Dot; 
+            result.node = lex_4_25::next_token(&chars, cur); 
             result.children.push(Box::new(left));
             result.children.push(Box::new(parse_expression(&chars, cur)));
         }
@@ -994,9 +544,11 @@ fn parse_expression(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
             }
             result = parse_operation(&chars, cur, left);
         }
-        lex_4_25::Token::Identifier(..) |
-        lex_4_25::Token::HexLiteral(..) |
-        lex_4_25::Token::StringLiteral(..) => {
+        lex_4_25::Token::Identifier(..)    |
+        lex_4_25::Token::HexLiteral(..)    |
+        lex_4_25::Token::StringLiteral(..) |
+        lex_4_25::Token::True              |
+        lex_4_25::Token::False => {
             let left = lex_4_25::next_token(&chars, cur);
             result = parse_operation(&chars, cur, left.to_leaf());
         }
