@@ -29,40 +29,44 @@ impl ParseNode {
         other.children.swap(0, 1);
         other
     }
+
+    fn empty() -> ParseNode {
+        ParseNode { node: lex_4_25::Token::NoMatch, children: vec![] }
+    }
 }
 
 impl lex_4_25::Token {
-    fn to_leaf(mut self) -> ParseNode {
+    fn to_leaf(self) -> ParseNode {
         ParseNode { node: self, children: vec![] }
     }
 }
 
 pub fn parse(input: String) -> ParseTree {
-    let current_node = &mut ParseNode{ node: lex_4_25::Token::NoMatch, children: vec![] }; 
+    let current_node = &mut ParseNode::empty();
     let mut tree = ParseTree{ children: vec![] };
-    let mut cur = 0;
-    let input_chars = input.chars().collect::<Vec<char>>(); 
-    while cur < input_chars.len() {
-        let next = lex_4_25::next_token(&input_chars, &mut cur);
-        match next {
+    let mut cur = &mut 0;
+    let input_chars = &mut input.chars().collect::<Vec<char>>(); 
+    while *cur < input_chars.len() {
+        let peek = lex_4_25::peek_token(&input_chars, &mut cur);
+        match peek {
             lex_4_25::Token::Pragma => {
                 current_node.node = lex_4_25::Token::Pragma;
-                parse_pragma(&input_chars, &mut cur, current_node, &mut tree);
+                tree.children.push(parse_pragma(input_chars, cur));
             }
             lex_4_25::Token::Import => {
-                // TODO
+                parse_import(input_chars, cur);
             }
             lex_4_25::Token::Contract => {
                 current_node.node = lex_4_25::Token::Contract;
-                parse_contract(&input_chars, &mut cur, current_node, &mut tree);
+                tree.children.push(parse_contract(input_chars, cur));
             }
             lex_4_25::Token::Library => {
                 current_node.node = lex_4_25::Token::Library;
-                parse_contract(&input_chars, &mut cur, current_node, &mut tree);
+                parse_contract(input_chars, cur);
             }
             lex_4_25::Token::Interface => {
                 current_node.node = lex_4_25::Token::Interface;
-                parse_contract(&input_chars, &mut cur, current_node, &mut tree);
+                parse_contract(input_chars, cur);
             }
             _ => {
                 // TODO: Add the below when everything is implemented
@@ -73,94 +77,66 @@ pub fn parse(input: String) -> ParseTree {
     tree
 }
 
-fn parse_pragma(chars: &Vec<char>, cur: &mut usize, node: &mut ParseNode, tree: &mut ParseTree) { 
-    let mut next = lex_4_25::next_token(chars, cur);
-    match next {
+pub fn parse_pragma(chars: &Vec<char>, cur: &mut usize) -> ParseNode { 
+    let mut result = ParseNode::empty();
+    match lex_4_25::next_token(chars, cur) {
+        lex_4_25::Token::Pragma => result.node = lex_4_25::Token::Pragma,
+        _ => panic!("Invalid pragma declaration")
+    }
+
+    match lex_4_25::next_token(chars, cur) {
         lex_4_25::Token::Identifier(name) => {
             if name != "solidity" {
                 panic!("Invalid source file: Not a solidity file")
             }
-            node.add_child(lex_4_25::Token::Identifier(name));
+            result.add_child(lex_4_25::Token::Identifier(name));
         }
-        _ => panic!("Invalid pragma declaration")
+        _ => panic!("2 Invalid pragma declaration")
     }
-    next = lex_4_25::next_token(&chars, cur);
-    match next {
+    match lex_4_25::next_token(&chars, cur) {
         lex_4_25::Token::Version(version) => {
             if version != "^0.4.25" && version != "0.4.25" {
                 panic!("Invalid source file: version other than 0.4.25 specfied")
             }
-            node.add_child(lex_4_25::Token::Version(version));
+            result.add_child(lex_4_25::Token::Version(version));
         }
-        _ => panic!("Invalid pragma declaration")
+        actual => panic!("3 Invalid pragma declaration {:?}", actual)
     }
-    next = lex_4_25::next_token(&chars, cur);
-    match next {
-        lex_4_25::Token::Semicolon => tree.children.push((*node).clone()), 
-        _ => panic!("Invalid pragma declaration")
+    match lex_4_25::next_token(&chars, cur) {
+        lex_4_25::Token::Semicolon => (), 
+        _ => panic!("4 Invalid pragma declaration")
     }
+    result
 } 
 
-fn parse_import(chars: &Vec<char>, cur: &mut usize, node: &mut ParseNode, tree: &mut ParseTree) { }
+fn parse_import(chars: &Vec<char>, cur: &mut usize) -> ParseNode { ParseNode::empty() }
 
-fn parse_contract(chars: &Vec<char>, cur: &mut usize, node: &mut ParseNode, tree: &mut ParseTree) { 
-    let mut next = lex_4_25::next_token(&chars, cur);
-    match next {
-        id@lex_4_25::Token::Identifier(..) => node.add_child(id),
+fn parse_contract(chars: &Vec<char>, cur: &mut usize) -> ParseNode { 
+    let mut result = ParseNode::empty();
+    match lex_4_25::next_token(&chars, cur) {
+        lex_4_25::Token::Contract => result.node = lex_4_25::Token::Contract,
         _ => panic!("Invalid contract definition")
     }
-    next = lex_4_25::next_token(&chars, cur);
-    match next {
-        lex_4_25::Token::Is => { 
-            node.add_child(lex_4_25::Token::Is);
-            // TODO: parse_inheritance_specifier(chars, cur, node, tree);
-        }
-        lex_4_25::Token::OpenBrace => (),
+    match lex_4_25::next_token(&chars, cur) {
+        id@lex_4_25::Token::Identifier(..) => result.add_child(id),
         _ => panic!("Invalid contract definition")
     }
-    parse_contract_part(chars, cur, node, tree);
-    tree.children.push((*node).clone());
-}
-
-/*** Contract Part ***/
-
-fn parse_contract_part(chars: &Vec<char>, cur: &mut usize, node: &mut ParseNode, tree: &mut ParseTree) {
-    let mut next = lex_4_25::next_token(&chars, cur);
-    match next {
-        lex_4_25::Token::Using => {
-            node.add_child(lex_4_25::Token::Using);
-            // TODO: parse_using_for_declaration(chars, cur, node, tree);
-        }
-        lex_4_25::Token::Struct => {
-            node.add_child(lex_4_25::Token::Struct);
-            // TODO: parse_struct_definition(chars, cur, node, tree);
-        }
-        lex_4_25::Token::Modifier => {
-            node.add_child(lex_4_25::Token::Modifier);
-            // TODO: parse_modifier_definition(chars, cur, node, tree);
-        }
-        lex_4_25::Token::Function => {
-            node.add_child(lex_4_25::Token::Function);
-            // TODO: parse_function_definition(chars, cur, node, tree);
-        }
-        lex_4_25::Token::Event => {
-            node.add_child(lex_4_25::Token::Event);
-            // TODO: parse_event_definition(chars, cur, node, tree);
-        }
-        lex_4_25::Token::Enum => {
-            node.add_child(lex_4_25::Token::Enum);
-            // TODO: parse_enum_definition(chars, cur, node, tree);
-        }
-        matched => ()// TODO: parse_state_variable_declaration(chars, cur, node, tree, matched)
+    match lex_4_25::next_token(&chars, cur) {
+        lex_4_25::Token::OpenBrace => result.add_child(lex_4_25::Token::OpenBrace),
+        _ => panic!("Invalid contract definition")
     }
+    match lex_4_25::next_token(&chars, cur) {
+        lex_4_25::Token::CloseBrace => (),
+        _ => panic!("Invalid contract definition")
+    }
+    result
 }
 
 /*** Expression ***/
 
 fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: ParseNode) -> ParseNode {
     let mut result = ParseNode{ node: lex_4_25::Token::NoMatch, children: vec![] };
-    let mut peek = lex_4_25::peek_token(&chars, cur);
-    match peek {
+    match lex_4_25::peek_token(&chars, cur) {
         lex_4_25::Token::Decrement | lex_4_25::Token::Increment => {
             result.node = lex_4_25::next_token(&chars, cur);
             result.children.push(Box::new(left));
@@ -169,7 +145,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: ParseNode) -> Parse
         lex_4_25::Token::OpenBracket => {
             result.node = lex_4_25::next_token(&chars, cur);
             result.children.push(Box::new(left));
-            let mut right = parse_expression(&chars, cur);
+            let right = parse_expression(&chars, cur);
             match right.node {
                 lex_4_25::Token::OpenBracket         |
                 lex_4_25::Token::Dot                 |
@@ -213,7 +189,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: ParseNode) -> Parse
         lex_4_25::Token::Dot => {
             result.node = lex_4_25::next_token(&chars, cur); 
             result.children.push(Box::new(left));
-            let mut right = lex_4_25::next_token(&chars, cur);
+            let right = lex_4_25::next_token(&chars, cur);
             match right {
                 id @ lex_4_25::Token::Identifier(..) => result.add_child(id),
                 _ => panic!("Invalid member access")
@@ -224,7 +200,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: ParseNode) -> Parse
             result.node = lex_4_25::Token::Function;
             result.children.push(Box::new(left));
             result.children.push(Box::new(parse_function_call_arguments(&chars, cur)));
-            let mut right = parse_expression(&chars, cur);
+            let right = parse_expression(&chars, cur);
             match right.node {
                 lex_4_25::Token::Power               |
                 lex_4_25::Token::Divide              |
@@ -263,7 +239,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: ParseNode) -> Parse
         lex_4_25::Token::Power => {
             result.node = lex_4_25::next_token(&chars, cur);
             result.children.push(Box::new(left));
-            let mut right = parse_expression(&chars, cur);
+            let right = parse_expression(&chars, cur);
             match right.node {
                 lex_4_25::Token::Power               |
                 lex_4_25::Token::Divide              |
@@ -303,7 +279,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: ParseNode) -> Parse
         lex_4_25::Token::Modulus => {
             result.node = lex_4_25::next_token(&chars, cur);
             result.children.push(Box::new(left));
-            let mut right = parse_expression(&chars, cur);
+            let right = parse_expression(&chars, cur);
             match right.node {
                 lex_4_25::Token::Divide              |
                 lex_4_25::Token::Minus               |
@@ -682,7 +658,7 @@ pub fn parse_expression(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
             result.children.push(Box::new(parse_type_name(&chars, cur)));
         }
         lex_4_25::Token::DecimalNumber(..) | lex_4_25::Token::HexNumber(..) => {
-            let mut left = ParseNode { node: lex_4_25::next_token(&chars, cur), children: vec![] };
+            let mut left = lex_4_25::next_token(&chars, cur).to_leaf();
             peek = lex_4_25::peek_token(&chars, cur);
             if peek.is_number_unit() {
                  left.add_child(lex_4_25::next_token(&chars, cur));  

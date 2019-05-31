@@ -372,7 +372,6 @@ fn match_collected(collected: String) -> Token {
     let id_re = Regex::new(r"^[a-zA-Z\$_][a-zA-Z0-9\$_]*$").unwrap();
     let hex_re = Regex::new(r"^0x[0-9a-fA-F]*$").unwrap();
     let hex_literal_re = Regex::new(r#"^hex(\\"([0-9a-fA-F]{2})*\\"|'([0-9a-fA-F]{2})*')$"#).unwrap();
-    let string_literal_re = Regex::new(r#"^"([^"\\r\\n]|\\\\.)*"$"#).unwrap(); 
     let version_re = Regex::new(r"^\^?[0-9]+\.[0-9]+\.[0-9]+").unwrap();
     return match collected.as_ref() {
         "address" => Token::Address,
@@ -542,7 +541,7 @@ fn match_collected(collected: String) -> Token {
         num if decimal_re.is_match(num) => Token::DecimalNumber(num.to_string()),
         hex if hex_literal_re.is_match(hex) => Token::HexLiteral(hex.to_string()),
         version if version_re.is_match(version) => Token::Version(version.to_string()),
-        none => Token::NoMatch
+        _ => Token::NoMatch
     }
 }
 
@@ -590,9 +589,6 @@ pub fn next_token(line: &Vec<char>, cur: &mut usize) -> Token {
             } else if line[*cur] == '.' {
                 *cur += 1;
                 return Token::Dot;
-            } else if line[*cur] == '^' {
-                *cur += 1;
-                return Token::BitwiseXor;
             } else if line[*cur] == '\"' {
                 collected.push(line[*cur]);
                 string = true;
@@ -607,6 +603,10 @@ pub fn next_token(line: &Vec<char>, cur: &mut usize) -> Token {
                 } else {
                     collected.push(line[*cur]);
                 }
+            } else if line[*cur] == '.' && (collected == "^0" || collected == "0" || collected == "^0.4" || collected == "0.4") {
+               collected.push('.');
+            } else if line[*cur] == '0' && collected == "^" {
+               collected.push('0');
             } else if line[*cur] == '*' && collected == "*" {
                 *cur += 1;
                 return Token::Power;
@@ -661,8 +661,9 @@ pub fn next_token(line: &Vec<char>, cur: &mut usize) -> Token {
             } else if line[*cur] == '&' && collected == "&" {
                 *cur += 1;
                 return Token::LogicalAnd;
+            } else if collected == "^" {
+                return Token::BitwiseXor;
             } else if collected == "<<" {
-                *cur += 1;
                 return Token::ShiftLeft;
             } else if collected == "-" {
                 return Token::Minus;
@@ -702,7 +703,7 @@ pub fn next_token(line: &Vec<char>, cur: &mut usize) -> Token {
                line[*cur] == '>' ||
                line[*cur] == '<' ||
                line[*cur] == '!' ||
-               line[*cur] == '.' 
+               line[*cur] == '.'
             {
                 return match_collected(collected);
             } else {
