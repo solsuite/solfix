@@ -209,6 +209,15 @@ fn parse_inheritance_specifier(chars: &Vec<char>, cur: &mut usize) -> ParseNode 
     result
 }
 
+fn parse_function_definition(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
+    let mut result = lex_4_25::Token::Function.to_leaf();
+    match lex_4_25::next_token(chars, cur) {
+        lex_4_25::Token::Function => (),
+        _ => panic!("Invalid function definition")
+    }
+    result
+}
+
 /*** Expression ***/
 
 fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: ParseNode) -> ParseNode {
@@ -813,7 +822,9 @@ pub fn parse_type_name(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
         elementary => {
             if elementary.is_elementary_type() {
                 lex_4_25::next_token(chars, cur);
-                elementary.to_leaf()
+                // Try to parse an array type and return elementary if the type isn't followed by
+                // array brackets.
+                parse_array_type_name(chars, cur, elementary.to_leaf())
             } else {
                 panic!("Invalid type name")
             }
@@ -844,30 +855,104 @@ fn parse_mapping(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
     let mut result = lex_4_25::Token::Mapping.to_leaf();
     match lex_4_25::next_token(chars, cur) {
         lex_4_25::Token::Mapping => (),
-        _ => panic!("1 Invalid mapping")
+        _ => panic!("Invalid mapping")
     }
     match lex_4_25::next_token(chars, cur) {
         lex_4_25::Token::OpenParenthesis => (),
-        _ => panic!("2 Invalid mapping")
+        _ => panic!("Invalid mapping")
     }
     let elementary = lex_4_25::next_token(chars, cur);
     if elementary.is_elementary_type() {
         result.add_child(elementary);
     } else {
-        panic!("3 Invalid mapping");
+        panic!("Invalid mapping");
     }
     match lex_4_25::next_token(chars, cur) {
         lex_4_25::Token::Arrow => (),
-        _ => panic!("4 Invalid mapping")
+        _ => panic!("Invalid mapping")
     }
     result.children.push(Box::new(parse_type_name(chars, cur)));
+    println!("{:?}", result);
     match lex_4_25::next_token(chars, cur) {
         lex_4_25::Token::CloseParenthesis => (),
-        actual => panic!("5 Invalid mapping: actual: {:?}", actual)
+        _ => panic!("Invalid mapping")
     }
     result
 }
 
-fn parse_function_type_name(chars: &Vec<char>, cur: &mut usize) -> ParseNode { ParseNode::empty() }
+fn parse_function_type_name(chars: &Vec<char>, cur: &mut usize) -> ParseNode { 
+    let mut result = lex_4_25::Token::Function.to_leaf();
+    match lex_4_25::next_token(chars, cur) {
+        lex_4_25::Token::Function => (),
+        _ => panic!("Invalid function type")
+    }
+    result.children.push(Box::new(parse_function_type_parameter_list(chars, cur)));
+    let mut start = false;
+    while !start {
+        match lex_4_25::peek_token(chars, cur) {
+            lex_4_25::Token::Internal |
+            lex_4_25::Token::External | 
+            lex_4_25::Token::Pure     |
+            lex_4_25::Token::Constant |
+            lex_4_25::Token::View     |
+            lex_4_25::Token::Payable => result.add_child(lex_4_25::next_token(chars, cur)),
+            _ => start = true
+        }
+    }
+    match lex_4_25::peek_token(chars, cur) {
+        lex_4_25::Token::Returns => {
+            result.add_child(lex_4_25::next_token(chars, cur));
+            let last = result.children.len() - 1;
+            result.children[last].children.push(Box::new(parse_function_type_parameter_list(chars, cur)));
+        }
+        _ => () 
+    }
+    result
+}
 
-fn parse_array_type_name(chars: &Vec<char>, cur: &mut usize) -> ParseNode { ParseNode::empty() }
+fn parse_function_type_parameter_list(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
+    let mut result = lex_4_25::Token::OpenParenthesis.to_leaf();
+    match lex_4_25::next_token(chars, cur) {
+        lex_4_25::Token::OpenParenthesis => (),
+        _ => panic!("Invalid function type parameter list")
+    }
+    let mut stop = false;
+    while !stop {
+        match lex_4_25::peek_token(chars, cur) {
+            lex_4_25::Token::CloseParenthesis => stop = true,
+            _ => result.children.push(Box::new(parse_type_name(chars, cur)))
+        }
+        match lex_4_25::peek_token(chars, cur) {
+            lex_4_25::Token::Comma => {
+                lex_4_25::next_token(chars, cur);
+            }
+            _ => stop = true,
+        }
+    }
+    match lex_4_25::next_token(chars, cur) {
+        lex_4_25::Token::CloseParenthesis => (),
+        _ => panic!("Invalid function type parameter list")
+    }
+    result
+}
+
+fn parse_array_type_name(chars: &Vec<char>, cur: &mut usize, left: ParseNode) -> ParseNode { 
+    let mut result = lex_4_25::Token::OpenBracket.to_leaf();
+    match lex_4_25::peek_token(chars, cur) {
+        lex_4_25::Token::OpenBracket => {
+            lex_4_25::next_token(chars, cur);
+        }
+        _ => return left 
+    }
+    result.children.push(Box::new(left));
+    let right = parse_expression(chars, cur);
+    match right.node {
+        lex_4_25::Token::NoMatch => (),
+        _ => result.children.push(Box::new(right))
+    }
+    match lex_4_25::next_token(chars, cur) {
+        lex_4_25::Token::CloseBracket => (),
+        _ => panic!("Invalid array type name")
+    }
+    result
+}

@@ -751,20 +751,19 @@ mod tests {
         let cur = &mut 0; 
         let actual = next_token(&chars, cur);
         match actual {
-            Token::StringLiteral(path) => (), 
-            actual => panic!("Expected: {:?} | Actual: {:?}", Token::StringLiteral(path), actual)
+            Token::StringLiteral(path) => assert_eq!(&path, "\"\""), 
+            actual => panic!("Expected: {:?} | Actual: {:?}", Token::StringLiteral("\"\"".to_string()), actual)
         }
     }
 
     #[test]
     fn string_literal_test2() {
-        let path = String::from("\"test_file\"");
-        let chars = path.chars().collect::<Vec<char>>();
+        let chars = String::from("\"test_file\"").chars().collect::<Vec<char>>();
         let cur = &mut 0; 
         let actual = next_token(&chars, cur);
         match actual {
-            Token::StringLiteral(path) => (), 
-            actual => panic!("Expected: {:?} | Actual: {:?}", Token::StringLiteral(path), actual)
+            Token::StringLiteral(path) => assert_eq!(&path, "\"test_file\""), 
+            actual => panic!("Expected: {:?} | Actual: {:?}", Token::StringLiteral("\"test_file\"".to_string()), actual)
         }
     }
 
@@ -775,8 +774,8 @@ mod tests {
         let cur = &mut 0; 
         let actual = next_token(&chars, cur);
         match actual {
-            Token::StringLiteral(path) => (), 
-            actual => panic!("Expected: {:?} | Actual: {:?}", Token::StringLiteral(path), actual)
+            Token::StringLiteral(path) => assert_eq!(&path, "\"test_file.sol\""), 
+            actual => panic!("Expected: {:?} | Actual: {:?}", Token::StringLiteral("\"test_file.sol\"".to_string()), actual)
         }
     }
 }
