@@ -48,8 +48,7 @@ pub fn parse(input: String) -> ParseTree {
     let mut cur = &mut 0;
     let input_chars = &mut input.chars().collect::<Vec<char>>(); 
     while *cur < input_chars.len() {
-        let peek = lex_4_25::peek_token(&input_chars, &mut cur);
-        match peek {
+        match lex_4_25::peek_token(input_chars, cur) {
             lex_4_25::Token::Pragma => {
                 current_node.node = lex_4_25::Token::Pragma;
                 tree.children.push(parse_pragma(input_chars, cur));
@@ -126,7 +125,7 @@ fn parse_contract(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
         _ => panic!("Invalid contract definition")
     }
     match lex_4_25::next_token(chars, cur) {
-        lex_4_25::Token::OpenBrace => result.add_child(lex_4_25::Token::OpenBrace),
+        lex_4_25::Token::OpenBrace => (),
         lex_4_25::Token::Is => is = true,
         _ => panic!("Invalid contract definition")
     }
@@ -142,20 +141,24 @@ fn parse_contract(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
             }
         }
         if let lex_4_25::Token::OpenBrace = lex_4_25::next_token(chars, cur) {
-            result.add_child(lex_4_25::Token::OpenBrace);
             result.children.push(Box::new(is_node));
         } else {
             panic!("Invalid contract definition")
         }
     }
-    match lex_4_25::peek_token(chars, cur) {
-        lex_4_25::Token::Enum => result.children[1].children.push(Box::new(parse_enum_definition(chars, cur))),
-        lex_4_25::Token::CloseBrace => (),
-        _ => panic!("Invalid contract definition")
-    }
+    result.children.push(Box::new(parse_contract_part(chars, cur)));
     match lex_4_25::next_token(chars, cur) {
         lex_4_25::Token::CloseBrace => (),
         _ => panic!("Invalid contract definition")
+    }
+    result
+}
+
+fn parse_contract_part(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
+    let mut result = lex_4_25::Token::OpenBrace.to_leaf(); 
+    match lex_4_25::peek_token(chars, cur) {
+        lex_4_25::Token::Enum => result.children.push(Box::new(parse_enum_definition(chars, cur))),
+        _ => () 
     }
     result
 }
