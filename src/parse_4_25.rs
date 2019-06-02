@@ -12,16 +12,22 @@ pub struct ParseNode {
 }
 
 impl ParseNode {
+    // Add a token to this node's children
     fn add_child(&mut self, token: lex_4_25::Token) { 
         self.children.push(Box::new(ParseNode{ node: token, children: vec![] })); 
     }
 
+    // Removes and returns the node's first child
     fn remove_left_child(&mut self) -> Box<ParseNode> { 
         let mut children = self.children.clone();
         self.children = children.split_off(1); 
         children.pop().unwrap()
     }
 
+    /**
+     * Merge other with self, returning the new parent node
+     * self recieves other.children[0], which is replaced by a pointer to self
+     */
     fn merge_expressions(mut self, mut other: ParseNode) -> ParseNode {
         self.children.push(other.remove_left_child());
         other.children.push(Box::new(self));
@@ -29,12 +35,14 @@ impl ParseNode {
         other
     }
 
+    // Returns a new, empty node
     fn empty() -> ParseNode {
         ParseNode { node: lex_4_25::Token::NoMatch, children: vec![] }
     }
 }
 
 impl lex_4_25::Token {
+    // Returns a new node, given a token
     fn to_leaf(self) -> ParseNode {
         ParseNode { node: self, children: vec![] }
     }
@@ -42,6 +50,7 @@ impl lex_4_25::Token {
 
 /*** Top-Level ***/
 
+// Parses the input contract and returns its ParseTree
 pub fn parse(input: String) -> ParseTree {
     let current_node = &mut ParseNode::empty();
     let mut tree = ParseTree{ children: vec![] };
@@ -50,22 +59,22 @@ pub fn parse(input: String) -> ParseTree {
     while *cur < input_chars.len() {
         match lex_4_25::peek_token(input_chars, cur) {
             lex_4_25::Token::Pragma => {
-                current_node.node = lex_4_25::Token::Pragma;
+                // current_node.node = lex_4_25::Token::Pragma;
                 tree.children.push(parse_pragma(input_chars, cur));
             }
             lex_4_25::Token::Import => {
                 parse_import(input_chars, cur);
             }
             lex_4_25::Token::Contract => {
-                current_node.node = lex_4_25::Token::Contract;
+                // current_node.node = lex_4_25::Token::Contract;
                 tree.children.push(parse_contract(input_chars, cur));
             }
             lex_4_25::Token::Library => {
-                current_node.node = lex_4_25::Token::Library;
+                // current_node.node = lex_4_25::Token::Library;
                 parse_contract(input_chars, cur);
             }
             lex_4_25::Token::Interface => {
-                current_node.node = lex_4_25::Token::Interface;
+                // current_node.node = lex_4_25::Token::Interface;
                 parse_contract(input_chars, cur);
             }
             _ => panic!("Invalid top level expression")
