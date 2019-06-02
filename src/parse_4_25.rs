@@ -284,7 +284,33 @@ fn parse_block(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
     result
 }
 
-fn parse_statement(chars: &Vec<char>, cur: &mut usize) -> ParseNode { ParseNode::empty() }
+/*** Statements ***/
+
+// This functions parses the input text for statements. Statements are used in contracts, 
+// and the grammar for statements specifies how many fundamental constructs must be written.
+// Statements include: if statements, while statments, for statements, blocks, inline assembly 
+// statements, *do while statements, *placeholder statements, *continue, *break, *return, 
+// *throw, *emit statements, *simple statments (* - must be followed by a semicolon).
+fn parse_statement(chars: &Vec<char>, cur: &mut usize) -> ParseNode { 
+    let mut result = ParseNode::empty();
+    match lex_4_25::next_token(chars, cur) {
+        lex_4_25::Token::If => result.children.push(Box::new(parse_if_statement(chars, cur))),
+        _ => panic!("Invalid statement")
+    }
+    result
+}
+
+fn parse_if_statement(chars: &Vec<char>, cur: &mut usize) -> ParseNode { ParseNode::empty() }
+
+fn parse_while_statement(chars: &Vec<char>, cur: &mut usize) -> ParseNode { ParseNode::empty() }
+
+fn parse_for_statement(chars: &Vec<char>, cur: &mut usize) -> ParseNode { ParseNode::empty() }
+
+fn parse_inline_assembly_statement(chars: &Vec<char>, cur: &mut usize) -> ParseNode { ParseNode::empty() }
+
+fn parse_do_while_statement(chars: &Vec<char>, cur: &mut usize) -> ParseNode { ParseNode::empty() }
+
+fn parse_emit_statement(chars: &Vec<char>, cur: &mut usize) -> ParseNode { ParseNode::empty() }
 
 /*** Expression ***/
 
