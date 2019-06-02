@@ -110,7 +110,7 @@ pub fn parse_pragma(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
 
 /*** Import ***/
 
-fn parse_import(chars: &Vec<char>, cur: &mut usize) -> ParseNode { ParseNode::empty() }
+fn parse_import(_chars: &Vec<char>, _cur: &mut usize) -> ParseNode { ParseNode::empty() }
 
 /*** Contract ***/
 
@@ -126,7 +126,7 @@ fn parse_contract(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
         _ => panic!("Invalid contract definition")
     }
     match lex_4_25::next_token(chars, cur) {
-        lex_4_25::Token::OpenBrace => result.add_child(lex_4_25::Token::OpenBrace),
+        lex_4_25::Token::OpenBrace => (),
         lex_4_25::Token::Is => is = true,
         _ => panic!("Invalid contract definition")
     }
@@ -142,20 +142,25 @@ fn parse_contract(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
             }
         }
         if let lex_4_25::Token::OpenBrace = lex_4_25::next_token(chars, cur) {
-            result.add_child(lex_4_25::Token::OpenBrace);
             result.children.push(Box::new(is_node));
         } else {
             panic!("Invalid contract definition")
         }
     }
-    match lex_4_25::peek_token(chars, cur) {
-        lex_4_25::Token::Enum => result.children[1].children.push(Box::new(parse_enum_definition(chars, cur))),
-        lex_4_25::Token::CloseBrace => (),
-        _ => panic!("Invalid contract definition")
-    }
+    result.children.push(Box::new(parse_contract_part(chars, cur)));
     match lex_4_25::next_token(chars, cur) {
         lex_4_25::Token::CloseBrace => (),
         _ => panic!("Invalid contract definition")
+    }
+    result
+}
+
+fn parse_contract_part(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
+    let mut result = lex_4_25::Token::OpenBrace.to_leaf(); 
+    match lex_4_25::peek_token(chars, cur) {
+        lex_4_25::Token::Enum => result.children.push(Box::new(parse_enum_definition(chars, cur))),
+        lex_4_25::Token::Function => result.children.push(Box::new(parse_function_definition(chars, cur))),
+        _ => () 
     }
     result
 }
@@ -205,6 +210,15 @@ fn parse_inheritance_specifier(chars: &Vec<char>, cur: &mut usize) -> ParseNode 
             lex_4_25::Token::CloseParenthesis => (),
             _ => panic!("Invalid inheritance specifier")
         }
+    }
+    result
+}
+
+fn parse_function_definition(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
+    let result = lex_4_25::Token::Function.to_leaf();
+    match lex_4_25::next_token(chars, cur) {
+        lex_4_25::Token::Function => (),
+        _ => panic!("Invalid function definition")
     }
     result
 }
@@ -809,7 +823,6 @@ pub fn parse_type_name(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
     return match lex_4_25::peek_token(chars, cur) {
         lex_4_25::Token::Identifier(..) => parse_user_defined_type_name(chars, cur),
         lex_4_25::Token::Mapping => parse_mapping(chars, cur),
-        lex_4_25::Token::Function => parse_function_type_name(chars, cur),
         elementary => {
             if elementary.is_elementary_type() {
                 lex_4_25::next_token(chars, cur);
@@ -867,7 +880,3 @@ fn parse_mapping(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
     }
     result
 }
-
-fn parse_function_type_name(chars: &Vec<char>, cur: &mut usize) -> ParseNode { ParseNode::empty() }
-
-fn parse_array_type_name(chars: &Vec<char>, cur: &mut usize) -> ParseNode { ParseNode::empty() }
