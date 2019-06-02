@@ -45,7 +45,7 @@ impl lex_4_25::Token {
 pub fn parse(input: String) -> ParseTree {
     let current_node = &mut ParseNode::empty();
     let mut tree = ParseTree{ children: vec![] };
-    let mut cur = &mut 0;
+    let cur = &mut 0;
     let input_chars = &mut input.chars().collect::<Vec<char>>(); 
     while *cur < input_chars.len() {
         match lex_4_25::peek_token(input_chars, cur) {
@@ -882,3 +882,5 @@ fn parse_mapping(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
     }
     result
 }
+
+fn parse_array_type_name(_chars: &Vec<char>, _cur: &mut usize, _left: ParseNode) -> ParseNode { ParseNode::empty() }
