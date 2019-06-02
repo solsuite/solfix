@@ -98,7 +98,7 @@ pub fn parse_pragma(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
             }
             result.add_child(lex_4_25::Token::Identifier(name));
         }
-        _ => panic!("2 Invalid pragma declaration")
+        _ => panic!("Invalid pragma declaration")
     }
     match lex_4_25::next_token(&chars, cur) {
         lex_4_25::Token::Version(version) => {
@@ -107,11 +107,11 @@ pub fn parse_pragma(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
             }
             result.add_child(lex_4_25::Token::Version(version));
         }
-        actual => panic!("3 Invalid pragma declaration {:?}", actual)
+        _ => panic!("Invalid pragma declaration")
     }
     match lex_4_25::next_token(&chars, cur) {
         lex_4_25::Token::Semicolon => (), 
-        _ => panic!("4 Invalid pragma declaration")
+        _ => panic!("Invalid pragma declaration")
     }
     result
 } 
@@ -163,11 +163,26 @@ fn parse_contract(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
     result
 }
 
+fn parse_inheritance_specifier(chars: &Vec<char>, cur: &mut usize) -> ParseNode { 
+    let mut result = lex_4_25::Token::OpenParenthesis.to_leaf();
+    result.children.push(Box::new(parse_user_defined_type_name(chars, cur)));
+    if let lex_4_25::Token::OpenParenthesis = lex_4_25::peek_token(chars, cur) {
+        lex_4_25::next_token(chars, cur);
+        result.children.push(Box::new(parse_expression_list(chars, cur)));
+        match lex_4_25::next_token(chars, cur) {
+            lex_4_25::Token::CloseParenthesis => (),
+            _ => panic!("Invalid inheritance specifier")
+        }
+    }
+    result
+}
+
 fn parse_contract_part(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
     let mut result = lex_4_25::Token::OpenBrace.to_leaf(); 
     match lex_4_25::peek_token(chars, cur) {
         lex_4_25::Token::Enum => result.children.push(Box::new(parse_enum_definition(chars, cur))),
         lex_4_25::Token::Function => result.children.push(Box::new(parse_function_definition(chars, cur))),
+        lex_4_25::Token::Modifier => result.children.push(Box::new(parse_modifier_definition(chars, cur))),
         _ => () 
     }
     result
@@ -208,17 +223,21 @@ fn parse_enum_definition(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
     result
 }
 
-fn parse_inheritance_specifier(chars: &Vec<char>, cur: &mut usize) -> ParseNode { 
-    let mut result = lex_4_25::Token::OpenParenthesis.to_leaf();
-    result.children.push(Box::new(parse_user_defined_type_name(chars, cur)));
-    if let lex_4_25::Token::OpenParenthesis = lex_4_25::peek_token(chars, cur) {
-        lex_4_25::next_token(chars, cur);
-        result.children.push(Box::new(parse_expression_list(chars, cur)));
-        match lex_4_25::next_token(chars, cur) {
-            lex_4_25::Token::CloseParenthesis => (),
-            _ => panic!("Invalid inheritance specifier")
-        }
+fn parse_modifier_definition(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
+    let mut result = lex_4_25::Token::Modifier.to_leaf();
+    match lex_4_25::next_token(chars, cur) {
+        lex_4_25::Token::Modifier => (),
+        _ => panic!("Invalid modifier definition")
     }
+    match lex_4_25::next_token(chars, cur) {
+        id @ lex_4_25::Token::Identifier(..) => result.add_child(id),
+        _ => panic!("Invalid modifier definition")
+    }
+    match lex_4_25::peek_token(chars, cur) {
+        lex_4_25::Token::OpenParenthesis => result.children.push(Box::new(parse_parameter_list(chars, cur))),
+        _ => ()
+    }
+    result.children.push(Box::new(parse_block(chars, cur))); 
     result
 }
 
@@ -230,6 +249,42 @@ fn parse_function_definition(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
     }
     result
 }
+
+fn parse_parameter_list(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
+    let mut result = lex_4_25::Token::OpenParenthesis.to_leaf();
+    match lex_4_25::next_token(chars, cur) {
+        lex_4_25::Token::OpenParenthesis => (),
+        _ => panic!("Invalid parameter list")
+    }
+    let mut stop = false;
+    match lex_4_25::next_token(chars, cur) {
+        lex_4_25::Token::CloseParenthesis => (),
+        _ => panic!("Invalid parameter list")
+    }
+    result
+}
+
+fn parse_block(chars: &Vec<char>, cur: &mut usize) -> ParseNode { 
+    let mut result = lex_4_25::Token::OpenBrace.to_leaf();
+    match lex_4_25::next_token(chars, cur) {
+        lex_4_25::Token::OpenBrace => (),
+        _ => panic!("Invalid block")
+    }
+    let mut stop = false;
+    while !stop {
+        match lex_4_25::peek_token(chars, cur) {
+            lex_4_25::Token::CloseBrace => stop = true,
+            _ => result.children.push(Box::new(parse_statement(chars, cur)))
+        }
+    }
+    match lex_4_25::next_token(chars, cur) {
+        lex_4_25::Token::CloseBrace => (),
+        _ => panic!("Invalid block")
+    }
+    result
+}
+
+fn parse_statement(chars: &Vec<char>, cur: &mut usize) -> ParseNode { ParseNode::empty() }
 
 /*** Expression ***/
 

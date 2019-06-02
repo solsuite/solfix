@@ -203,7 +203,42 @@ mod parse_tests {
     fn contract_function_test1() { }
 
     #[test]
-    fn contract_modifier_test1() { }
+    fn contract_modifier_test1() { 
+        let tree = parse(String::from("contract Modifier { modifier doNothing() { _;} }"));
+        assert_eq!(tree.children.len(), 1);
+        match &tree.children[0].node {
+            lex_4_25::Token::Contract => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::Contract, actual)
+        }
+        assert_eq!(tree.children[0].children.len(), 2);
+        match &tree.children[0].children[0].node {
+            lex_4_25::Token::Identifier(contract) => assert_eq!(contract, &"Modifier"),
+            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::Identifier("Modifier".to_string()), actual)
+        }
+        match &tree.children[0].children[1].node {
+            lex_4_25::Token::OpenBrace => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::OpenBrace, actual)
+        }
+        assert_eq!(tree.children[0].children[0].children.len(), 0);
+        assert_eq!(tree.children[0].children[1].children.len(), 1);
+        match &tree.children[0].children[1].children[0].node {
+            lex_4_25::Token::Modifier => (),
+            actual => panic!("Expected: {:?} | Actual {:?}", lex_4_25::Token::Modifier, actual)
+        }
+        assert_eq!(tree.children[0].children[1].children[0].children.len(), 3);
+        match &tree.children[0].children[1].children[0].children[0].node {
+            lex_4_25::Token::Identifier(modifier) => assert_eq!(modifier, &"doNothing"),
+            actual => panic!("Expected: {:?} | Actual {:?}", lex_4_25::Token::Identifier("doNothing".to_string()), actual)
+        }
+        match &tree.children[0].children[1].children[0].children[1].node {
+            lex_4_25::Token::OpenParenthesis => (),
+            actual => panic!("Expected: {:?} | Actual {:?}", lex_4_25::Token::OpenParenthesis, actual)
+        }
+        match &tree.children[0].children[1].children[0].children[2].node {
+            lex_4_25::Token::OpenBrace => (),
+            actual => panic!("Expected: {:?} | Actual {:?}", lex_4_25::Token::OpenBrace, actual)
+        }
+    }
 
     #[test]
     fn contract_using_for_test1() { }
