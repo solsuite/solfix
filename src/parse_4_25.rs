@@ -17,12 +17,7 @@ impl ParseNode {
         self.children.push(Box::new(ParseNode{ node: token, children: vec![] })); 
     }
 
-    // Removes and returns the node's first child
-    fn remove_left_child(&mut self) -> Box<ParseNode> { 
-        let mut children = self.children.clone();
-        self.children = children.split_off(1); 
-        children.pop().unwrap()
-    }
+    fn remove_left_child(&mut self) -> Box<ParseNode> { self.children.remove(0) }
 
     /**
      * Merge other with self, returning the new parent node
@@ -127,16 +122,16 @@ fn parse_contract(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
     let mut result = ParseNode::empty();
     match lex_4_25::next_token(chars, cur) {
         lex_4_25::Token::Contract => result.node = lex_4_25::Token::Contract,
-        _ => panic!("Invalid contract definition")
+        _ => panic!("1Invalid contract definition")
     }
     match lex_4_25::next_token(chars, cur) {
         id@lex_4_25::Token::Identifier(..) => result.add_child(id),
-        _ => panic!("Invalid contract definition")
+        _ => panic!("2Invalid contract definition")
     }
     match lex_4_25::next_token(chars, cur) {
         lex_4_25::Token::OpenBrace => (),
         lex_4_25::Token::Is => is = true,
-        _ => panic!("Invalid contract definition")
+        _ => panic!("3Invalid contract definition")
     }
     if is {
         let mut stop = false;
@@ -152,13 +147,13 @@ fn parse_contract(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
         if let lex_4_25::Token::OpenBrace = lex_4_25::next_token(chars, cur) {
             result.children.push(Box::new(is_node));
         } else {
-            panic!("Invalid contract definition")
+            panic!("4Invalid contract definition")
         }
     }
     result.children.push(Box::new(parse_contract_part(chars, cur)));
     match lex_4_25::next_token(chars, cur) {
         lex_4_25::Token::CloseBrace => (),
-        _ => panic!("Invalid contract definition")
+        actual => panic!("5Invalid contract definition {:?}", actual)
     }
     result
 }
@@ -242,13 +237,41 @@ fn parse_modifier_definition(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
 }
 
 fn parse_function_definition(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
-    let result = lex_4_25::Token::Function.to_leaf();
+    let mut result = lex_4_25::Token::Function.to_leaf();
     match lex_4_25::next_token(chars, cur) {
         lex_4_25::Token::Function => (),
         _ => panic!("Invalid function definition")
     }
+    match lex_4_25::next_token(chars, cur) {
+        id @ lex_4_25::Token::Identifier(..) => result.add_child(id),
+        _ => panic!("Invalid function definition")
+    }
+    result.children.push(Box::new(parse_parameter_list(chars, cur)));
+    let mut stop = false;
+    while !stop {
+        match lex_4_25::peek_token(chars, cur) {
+            lex_4_25::Token::External |
+            lex_4_25::Token::Internal |
+            lex_4_25::Token::Pure     |
+            lex_4_25::Token::Constant |
+            lex_4_25::Token::View     |
+            lex_4_25::Token::Payable => result.add_child(lex_4_25::next_token(chars, cur)),
+            lex_4_25::Token::Identifier(..) => result.children.push(Box::new(parse_method_invocation(chars, cur))),
+            _ => stop = true
+        }
+    }
+    match lex_4_25::peek_token(chars, cur) {
+        lex_4_25::Token::Returns => {
+            result.add_child(lex_4_25::next_token(chars, cur));
+            result.children.push(Box::new(parse_parameter_list(chars, cur)));
+        }
+        _ => (), 
+    }
+    result.children.push(Box::new(parse_block(chars, cur)));
     result
 }
+
+fn parse_method_invocation(chars: &Vec<char>, cur: &mut usize) -> ParseNode { ParseNode::empty() }
 
 fn parse_parameter_list(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
     let result = lex_4_25::Token::OpenParenthesis.to_leaf();
