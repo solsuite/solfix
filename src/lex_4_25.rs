@@ -220,6 +220,7 @@ pub enum Token {
 }
 
 impl Token {
+    // Returns whether the Token is a unit
     pub fn is_number_unit(&self) -> bool {
         return match self {
             Token::Days => true,
@@ -236,6 +237,7 @@ impl Token {
         }
     }
 
+    // Returns whether the Token is an int
     pub fn is_int(&self) -> bool {
         return match self {
             Token::Int => true,
@@ -275,6 +277,7 @@ impl Token {
         }
     }
 
+    // Returns whether the token is an unsigned integer
     pub fn is_uint(&self) -> bool {
         return match self {
             Token::Uint => true,
@@ -314,6 +317,7 @@ impl Token {
         }
     }
 
+    // Returns whether the Token is a byte, bytes, or bytesXX
     pub fn is_byte(&self) -> bool {
         return match self {
             Token::Byte => true,
@@ -354,6 +358,8 @@ impl Token {
         }
     }
 
+    // Returns whether the token represents an elementary type
+    // (address, bool, string, var, int, uint, byte)
     pub fn is_elementary_type(&self) -> bool {
         return match self {
             Token::Address => true,
@@ -373,6 +379,7 @@ trait StopToken {
 }
 
 impl StopToken for char {
+    // If true, the lexer will stop reading at this Token
     fn is_stop_token(self) -> bool {
         if self.is_whitespace() ||
            self == ';' ||
@@ -401,6 +408,10 @@ impl StopToken for char {
     }
 }
 
+/**
+ * Given a collected string, returns the matching Token
+ * Returns Token::NoMatch if no match is found
+ */
 fn match_collected(collected: String) -> Token {
     let decimal_re = Regex::new(r"^[0-9]+(\.[0-9]*)?([eE][0-9]+)?$").unwrap();
     let id_re = Regex::new(r"^[a-zA-Z\$_][a-zA-Z0-9\$_]*$").unwrap();
@@ -579,10 +590,15 @@ fn match_collected(collected: String) -> Token {
     }
 }
 
+/**
+ * Returns the next Token found in the line and increments cur
+ * to the end of the Token in the parsed line
+ */
 pub fn next_token(line: &Vec<char>, cur: &mut usize) -> Token {
     let mut string = false;
     let mut collected = String::new();
     while *cur < line.len() {
+        // If no characters have been collected, we are reading a new Token
         if collected.len() == 0 {
             if line[*cur] == ';' {
                 *cur += 1;
@@ -628,14 +644,12 @@ pub fn next_token(line: &Vec<char>, cur: &mut usize) -> Token {
                 string = true;
             } else if !line[*cur].is_whitespace() {
                 collected.push(line[*cur]);
-            }
+            } // else: do nothing, increment cur by 1
         } else {
             if string {
+                collected.push(line[*cur]);
                 if line[*cur] == '\"' {
-                    collected.push('\"');
                     return Token::StringLiteral(collected);
-                } else {
-                    collected.push(line[*cur]);
                 }
             } else if line[*cur] == '.' && (collected == "^0" || collected == "0" || collected == "^0.4" || collected == "0.4") {
                collected.push('.');
@@ -728,9 +742,11 @@ pub fn next_token(line: &Vec<char>, cur: &mut usize) -> Token {
         }
         *cur += 1;
     }
+    // If the end of the line is reached, match the collected characters and return the result
     match_collected(collected)
 }
 
+// Return the next token in the line, without incrementing cur
 pub fn peek_token(line: &Vec<char>, cur: &mut usize) -> Token {
     let old = *cur;
     let next = next_token(line, cur);
