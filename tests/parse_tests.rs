@@ -75,6 +75,7 @@ mod parse_tests {
     #[test]
     fn contract_test2() {
         let tree = parse(String::from("contract B is A {}"));
+        println!("{:?}", tree);
         assert_eq!(tree.children.len(), 1);
         match &tree.children[0].node {
             lex_4_25::Token::Contract => (),
