@@ -395,6 +395,23 @@ impl LineMatch for Vec<char> {
     }
 }
 
+trait CharExt {
+    fn begins_identifier(&self) -> bool;
+    fn is_whitespace(&self) -> bool;
+}
+
+impl CharExt for char {
+    // If self could be the first character of an identifier, returns true
+    fn begins_identifier(&self) -> bool {
+        return *self == '_' || *self == '$' || self.is_ascii_alphabetic();
+    }
+
+    // If self is whitespace, returns true
+    fn is_whitespace(&self) -> bool {
+        return *self == ' ';
+    }
+}
+
 /**
  * Given a collected string, returns the matching Token
  * Returns Token::NoMatch if no match is found
@@ -846,8 +863,23 @@ fn match_string(line: &Vec<char>, cur: &mut usize) -> Token {
     Token::NoMatch
 }
 
+/**
+ * Increments cur until end of line or until a non-whitespace character
+ * Returns Token::NoMatch, which is used in the match statement
+ */
+fn skip_whitespace(line: &Vec<char>, cur: &mut usize) -> Token {
+    while *cur < line.len() && line.match_idx(*cur + 1, ' ') {
+        *cur += 1;
+    }
+    Token::NoMatch
+}
+
 // TODO
-fn match_identifier(line: &Vec<char>, cur: &mut usize) -> Token {
+fn match_identifier_or_keyword(line: &Vec<char>, cur: &mut usize) -> Token {
+    Token::NoMatch
+}
+
+fn match_number(line: &Vec<char>, cur: &mut usize) -> Token {
     Token::NoMatch
 }
 
@@ -856,38 +888,53 @@ fn match_identifier(line: &Vec<char>, cur: &mut usize) -> Token {
  * to the end of the Token in the parsed line
  */
 pub fn next_token(line: &Vec<char>, cur: &mut usize) -> Token {
-    let token = match line[*cur] {
-        ';' => Token::Semicolon,
-        '{' => Token::OpenBrace,
-        '}' => Token::CloseBrace,
-        '(' => Token::OpenParenthesis,
-        ')' => Token::CloseParenthesis,
-        '[' => Token::OpenBracket,
-        ']' => Token::CloseBracket,
-        '?' => Token::Question,
-        ',' => Token::Comma,
-        '~' => Token::Tilda,
-        '.' => match_period(line, cur),
-        ':' => match_colon(line, cur),          // : :=
-        '=' => match_equals(line, cur),         // = == =>
-        '+' => match_plus(line, cur),           // + ++ +=
-        '-' => match_minus(line, cur),          // - -- -=
-        '*' => match_star(line, cur),           // * ** *=
-        '/' => match_slash(line, cur),          // / // /* /=
-        '>' => match_rarrow(line, cur),         // > >= >> >>= >>> >>>=
-        '<' => match_larrow(line, cur),         // < <= << <<=
-        '!' => match_exclamation(line, cur),    // ! !=
-        '%' => match_percent(line, cur),        // % %=
-        '&' => match_and(line, cur),            // & && &=
-        '|' => match_or(line, cur),             // | || |=
-        '^' => match_xor(line, cur),            // ^ ^=
-        '"' | '\'' => match_string(line, cur),
-        _ => match_identifier(line, cur)
-    };
+    let mut next = Token::NoMatch;
+    loop {
+        let t = match line[*cur] {
+            ';' => Token::Semicolon,
+            '{' => Token::OpenBrace,
+            '}' => Token::CloseBrace,
+            '(' => Token::OpenParenthesis,
+            ')' => Token::CloseParenthesis,
+            '[' => Token::OpenBracket,
+            ']' => Token::CloseBracket,
+            '?' => Token::Question,
+            ',' => Token::Comma,
+            '~' => Token::Tilda,
+            '.' => match_period(line, cur),
+            ':' => match_colon(line, cur),          // : :=
+            '=' => match_equals(line, cur),         // = == =>
+            '+' => match_plus(line, cur),           // + ++ +=
+            '-' => match_minus(line, cur),          // - -- -=
+            '*' => match_star(line, cur),           // * ** *=
+            '/' => match_slash(line, cur),          // / // /* /=
+            '>' => match_rarrow(line, cur),         // > >= >> >>= >>> >>>=
+            '<' => match_larrow(line, cur),         // < <= << <<=
+            '!' => match_exclamation(line, cur),    // ! !=
+            '%' => match_percent(line, cur),        // % %=
+            '&' => match_and(line, cur),            // & && &=
+            '|' => match_or(line, cur),             // | || |=
+            '^' => match_xor(line, cur),            // ^ ^=
+            '"' | '\'' => match_string(line, cur),
+            ' ' => skip_whitespace(line, cur),
+            c => {
+                if c.begins_identifier() {
+                    match_identifier_or_keyword(line, cur)
+                } else if c.is_digit(10) {
+                    match_number(line, cur)
+                } else {
+                    Token::NoMatch
+                }
+            }
+        };
 
-    // TODO case NoMatch?
-    *cur += 1;
-    return token;
+        *cur += 1;
+        if t != Token::NoMatch || *cur == line.len() {
+            next = t;
+            break;
+        }
+    }
+    next
 }
 
 // Return the next token in the line, without incrementing cur
@@ -902,6 +949,10 @@ pub fn peek_token(line: &Vec<char>, cur: &mut usize) -> Token {
 mod tests {
     use super::*;
 
+    fn fail_test(expect: Token, actual: Token) {
+        panic!("Expected: {:?} | Actual: {:?}", expect, actual);
+    }
+
     /* Colon */
 
     #[test]
@@ -909,10 +960,9 @@ mod tests {
         let s = String::from(":");
         let chars = s.chars().collect::<Vec<char>>();
         let cur = &mut 0;
-        let actual = next_token(&chars, cur);
-        match actual {
+        match next_token(&chars, cur) {
             Token::Colon => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", Token::Colon, actual)
+            actual => fail_test(Token::Colon, actual)
         }
     }
 
@@ -921,10 +971,9 @@ mod tests {
         let s = String::from(":=");
         let chars = s.chars().collect::<Vec<char>>();
         let cur = &mut 0;
-        let actual = next_token(&chars, cur);
-        match actual {
+        match next_token(&chars, cur) {
             Token::ASMAssign => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", Token::ASMAssign, actual)
+            actual => fail_test(Token::ASMAssign, actual)
         }
     }
 
@@ -935,10 +984,9 @@ mod tests {
         let s = String::from("=");
         let chars = s.chars().collect::<Vec<char>>();
         let cur = &mut 0;
-        let actual = next_token(&chars, cur);
-        match actual {
+        match next_token(&chars, cur) {
             Token::Set => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", Token::Set, actual)
+            actual => fail_test(Token::Set, actual)
         }
     }
 
@@ -947,10 +995,9 @@ mod tests {
         let s = String::from("==");
         let chars = s.chars().collect::<Vec<char>>();
         let cur = &mut 0;
-        let actual = next_token(&chars, cur);
-        match actual {
+        match next_token(&chars, cur) {
             Token::Equals => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", Token::Equals, actual)
+            actual => fail_test(Token::Equals, actual)
         }
     }
 
@@ -959,10 +1006,9 @@ mod tests {
         let s = String::from("=>");
         let chars = s.chars().collect::<Vec<char>>();
         let cur = &mut 0;
-        let actual = next_token(&chars, cur);
-        match actual {
+        match next_token(&chars, cur) {
             Token::Arrow => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", Token::Arrow, actual)
+            actual => fail_test(Token::Arrow, actual)
         }
     }
 
@@ -973,10 +1019,9 @@ mod tests {
         let s = String::from("+");
         let chars = s.chars().collect::<Vec<char>>();
         let cur = &mut 0;
-        let actual = next_token(&chars, cur);
-        match actual {
+        match next_token(&chars, cur) {
             Token::Plus => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", Token::Plus, actual)
+            actual => fail_test(Token::Plus, actual)
         }
     }
 
@@ -985,10 +1030,9 @@ mod tests {
         let s = String::from("++");
         let chars = s.chars().collect::<Vec<char>>();
         let cur = &mut 0;
-        let actual = next_token(&chars, cur);
-        match actual {
+        match next_token(&chars, cur) {
             Token::Increment => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", Token::Increment, actual)
+            actual => fail_test(Token::Increment, actual)
         }
     }
 
@@ -997,10 +1041,9 @@ mod tests {
         let s = String::from("+=");
         let chars = s.chars().collect::<Vec<char>>();
         let cur = &mut 0;
-        let actual = next_token(&chars, cur);
-        match actual {
+        match next_token(&chars, cur) {
             Token::PlusEquals => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", Token::PlusEquals, actual)
+            actual => fail_test(Token::PlusEquals, actual)
         }
     }
 
@@ -1011,10 +1054,9 @@ mod tests {
         let s = String::from("-");
         let chars = s.chars().collect::<Vec<char>>();
         let cur = &mut 0;
-        let actual = next_token(&chars, cur);
-        match actual {
+        match next_token(&chars, cur) {
             Token::Minus => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", Token::Minus, actual)
+            actual => fail_test(Token::Minus, actual)
         }
     }
 
@@ -1023,10 +1065,9 @@ mod tests {
         let s = String::from("--");
         let chars = s.chars().collect::<Vec<char>>();
         let cur = &mut 0;
-        let actual = next_token(&chars, cur);
-        match actual {
+        match next_token(&chars, cur) {
             Token::Decrement => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", Token::Decrement, actual)
+            actual => fail_test(Token::Decrement, actual)
         }
     }
 
@@ -1035,10 +1076,9 @@ mod tests {
         let s = String::from("-=");
         let chars = s.chars().collect::<Vec<char>>();
         let cur = &mut 0;
-        let actual = next_token(&chars, cur);
-        match actual {
+        match next_token(&chars, cur) {
             Token::MinusEquals => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", Token::MinusEquals, actual)
+            actual => fail_test(Token::MinusEquals, actual)
         }
     }
 
@@ -1049,10 +1089,9 @@ mod tests {
         let s = String::from("*");
         let chars = s.chars().collect::<Vec<char>>();
         let cur = &mut 0;
-        let actual = next_token(&chars, cur);
-        match actual {
+        match next_token(&chars, cur) {
             Token::Multiply => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", Token::Multiply, actual)
+            actual => fail_test(Token::Multiply, actual)
         }
     }
 
@@ -1061,10 +1100,9 @@ mod tests {
         let s = String::from("**");
         let chars = s.chars().collect::<Vec<char>>();
         let cur = &mut 0;
-        let actual = next_token(&chars, cur);
-        match actual {
+        match next_token(&chars, cur) {
             Token::Power => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", Token::Power, actual)
+            actual => fail_test(Token::Power, actual)
         }
     }
 
@@ -1073,10 +1111,9 @@ mod tests {
         let s = String::from("*=");
         let chars = s.chars().collect::<Vec<char>>();
         let cur = &mut 0;
-        let actual = next_token(&chars, cur);
-        match actual {
+        match next_token(&chars, cur) {
             Token::MultiplyEquals => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", Token::MultiplyEquals, actual)
+            actual => fail_test(Token::MultiplyEquals, actual)
         }
     }
     
@@ -1087,10 +1124,9 @@ mod tests {
         let s = String::from("/");
         let chars = s.chars().collect::<Vec<char>>();
         let cur = &mut 0;
-        let actual = next_token(&chars, cur);
-        match actual {
+        match next_token(&chars, cur) {
             Token::Divide => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", Token::Divide, actual)
+            actual => fail_test(Token::Divide, actual)
         }
     }
 
@@ -1099,10 +1135,9 @@ mod tests {
         let s = String::from("//");
         let chars = s.chars().collect::<Vec<char>>();
         let cur = &mut 0;
-        let actual = next_token(&chars, cur);
-        match actual {
+        match next_token(&chars, cur) {
             Token::CommentSingle => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", Token::CommentSingle, actual)
+            actual => fail_test(Token::CommentSingle, actual)
         }
     }
 
@@ -1111,10 +1146,9 @@ mod tests {
         let s = String::from("/*");
         let chars = s.chars().collect::<Vec<char>>();
         let cur = &mut 0;
-        let actual = next_token(&chars, cur);
-        match actual {
+        match next_token(&chars, cur) {
             Token::CommentMulti => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", Token::CommentMulti, actual)
+            actual => fail_test(Token::CommentMulti, actual)
         }
     }
 
@@ -1123,10 +1157,9 @@ mod tests {
         let s = String::from("/=");
         let chars = s.chars().collect::<Vec<char>>();
         let cur = &mut 0;
-        let actual = next_token(&chars, cur);
-        match actual {
+        match next_token(&chars, cur) {
             Token::DivideEquals => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", Token::DivideEquals, actual)
+            actual => fail_test(Token::DivideEquals, actual)
         }
     }
 
@@ -1137,10 +1170,9 @@ mod tests {
         let s = String::from(">");
         let chars = s.chars().collect::<Vec<char>>();
         let cur = &mut 0;
-        let actual = next_token(&chars, cur);
-        match actual {
+        match next_token(&chars, cur) {
             Token::GreaterThan => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", Token::GreaterThan, actual)
+            actual => fail_test(Token::GreaterThan, actual)
         }
     }
 
@@ -1149,10 +1181,9 @@ mod tests {
         let s = String::from(">=");
         let chars = s.chars().collect::<Vec<char>>();
         let cur = &mut 0;
-        let actual = next_token(&chars, cur);
-        match actual {
+        match next_token(&chars, cur) {
             Token::GreaterThanOrEquals => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", Token::GreaterThanOrEquals, actual)
+            actual => fail_test(Token::GreaterThanOrEquals, actual)
         }
     }
 
@@ -1161,10 +1192,9 @@ mod tests {
         let s = String::from(">>");
         let chars = s.chars().collect::<Vec<char>>();
         let cur = &mut 0;
-        let actual = next_token(&chars, cur);
-        match actual {
+        match next_token(&chars, cur) {
             Token::ShiftRight => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", Token::ShiftRight, actual)
+            actual => fail_test(Token::ShiftRight, actual)
         }
     }
 
@@ -1173,10 +1203,9 @@ mod tests {
         let s = String::from(">>=");
         let chars = s.chars().collect::<Vec<char>>();
         let cur = &mut 0;
-        let actual = next_token(&chars, cur);
-        match actual {
+        match next_token(&chars, cur) {
             Token::ShiftRightEquals => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", Token::ShiftRightEquals, actual)
+            actual => fail_test(Token::ShiftRightEquals, actual)
         }
     }
 
@@ -1185,10 +1214,9 @@ mod tests {
         let s = String::from(">>>");
         let chars = s.chars().collect::<Vec<char>>();
         let cur = &mut 0;
-        let actual = next_token(&chars, cur);
-        match actual {
+        match next_token(&chars, cur) {
             Token::NoMatch => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", Token::NoMatch, actual)
+            actual => fail_test(Token::NoMatch, actual)
         }
     }
 
@@ -1197,10 +1225,9 @@ mod tests {
         let s = String::from(">>>=");
         let chars = s.chars().collect::<Vec<char>>();
         let cur = &mut 0;
-        let actual = next_token(&chars, cur);
-        match actual {
+        match next_token(&chars, cur) {
             Token::NoMatch => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", Token::NoMatch, actual)
+            actual => fail_test(Token::NoMatch, actual)
         }
     }
 
@@ -1211,10 +1238,9 @@ mod tests {
         let s = String::from("<");
         let chars = s.chars().collect::<Vec<char>>();
         let cur = &mut 0;
-        let actual = next_token(&chars, cur);
-        match actual {
+        match next_token(&chars, cur) {
             Token::LessThan => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", Token::LessThan, actual)
+            actual => fail_test(Token::LessThan, actual)
         }
     }
 
@@ -1223,10 +1249,9 @@ mod tests {
         let s = String::from("<=");
         let chars = s.chars().collect::<Vec<char>>();
         let cur = &mut 0;
-        let actual = next_token(&chars, cur);
-        match actual {
+        match next_token(&chars, cur) {
             Token::LessThanOrEquals => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", Token::LessThanOrEquals, actual)
+            actual => fail_test(Token::LessThanOrEquals, actual)
         }
     }
 
@@ -1235,10 +1260,9 @@ mod tests {
         let s = String::from("<<");
         let chars = s.chars().collect::<Vec<char>>();
         let cur = &mut 0;
-        let actual = next_token(&chars, cur);
-        match actual {
+        match next_token(&chars, cur) {
             Token::ShiftLeft => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", Token::ShiftLeft, actual)
+            actual => fail_test(Token::ShiftLeft, actual)
         }
     }
 
@@ -1247,10 +1271,9 @@ mod tests {
         let s = String::from("<<=");
         let chars = s.chars().collect::<Vec<char>>();
         let cur = &mut 0;
-        let actual = next_token(&chars, cur);
-        match actual {
+        match next_token(&chars, cur) {
             Token::ShiftLeftEquals => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", Token::ShiftLeftEquals, actual)
+            actual => fail_test(Token::ShiftLeftEquals, actual)
         }
     }
 
@@ -1261,10 +1284,9 @@ mod tests {
         let s = String::from("!");
         let chars = s.chars().collect::<Vec<char>>();
         let cur = &mut 0;
-        let actual = next_token(&chars, cur);
-        match actual {
+        match next_token(&chars, cur) {
             Token::Exclamation => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", Token::Exclamation, actual)
+            actual => fail_test(Token::Exclamation, actual)
         }
     }
 
@@ -1273,10 +1295,9 @@ mod tests {
         let s = String::from("!=");
         let chars = s.chars().collect::<Vec<char>>();
         let cur = &mut 0;
-        let actual = next_token(&chars, cur);
-        match actual {
+        match next_token(&chars, cur) {
             Token::NotEquals => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", Token::NotEquals, actual)
+            actual => fail_test(Token::NotEquals, actual)
         }
     }
 
@@ -1287,10 +1308,9 @@ mod tests {
         let s = String::from("%");
         let chars = s.chars().collect::<Vec<char>>();
         let cur = &mut 0;
-        let actual = next_token(&chars, cur);
-        match actual {
+        match next_token(&chars, cur) {
             Token::Modulus => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", Token::Modulus, actual)
+            actual => fail_test(Token::Modulus, actual)
         }
     }
 
@@ -1299,10 +1319,9 @@ mod tests {
         let s = String::from("%=");
         let chars = s.chars().collect::<Vec<char>>();
         let cur = &mut 0;
-        let actual = next_token(&chars, cur);
-        match actual {
+        match next_token(&chars, cur) {
             Token::ModEquals => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", Token::ModEquals, actual)
+            actual => fail_test(Token::ModEquals, actual)
         }
     }
 
@@ -1313,10 +1332,9 @@ mod tests {
         let s = String::from("&");
         let chars = s.chars().collect::<Vec<char>>();
         let cur = &mut 0;
-        let actual = next_token(&chars, cur);
-        match actual {
+        match next_token(&chars, cur) {
             Token::BitwiseAnd => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", Token::BitwiseAnd, actual)
+            actual => fail_test(Token::BitwiseAnd, actual)
         }
     }
 
@@ -1325,10 +1343,9 @@ mod tests {
         let s = String::from("&&");
         let chars = s.chars().collect::<Vec<char>>();
         let cur = &mut 0;
-        let actual = next_token(&chars, cur);
-        match actual {
+        match next_token(&chars, cur) {
             Token::LogicalAnd => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", Token::LogicalAnd, actual)
+            actual => fail_test(Token::LogicalAnd, actual)
         }
     }
 
@@ -1337,10 +1354,9 @@ mod tests {
         let s = String::from("&=");
         let chars = s.chars().collect::<Vec<char>>();
         let cur = &mut 0;
-        let actual = next_token(&chars, cur);
-        match actual {
+        match next_token(&chars, cur) {
             Token::AndEquals => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", Token::AndEquals, actual)
+            actual => fail_test(Token::AndEquals, actual)
         }
     }
 
@@ -1351,10 +1367,9 @@ mod tests {
         let s = String::from("|");
         let chars = s.chars().collect::<Vec<char>>();
         let cur = &mut 0;
-        let actual = next_token(&chars, cur);
-        match actual {
+        match next_token(&chars, cur) {
             Token::BitwiseOr => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", Token::BitwiseOr, actual)
+            actual => fail_test(Token::BitwiseOr, actual)
         }
     }
 
@@ -1363,10 +1378,9 @@ mod tests {
         let s = String::from("||");
         let chars = s.chars().collect::<Vec<char>>();
         let cur = &mut 0;
-        let actual = next_token(&chars, cur);
-        match actual {
+        match next_token(&chars, cur) {
             Token::LogicalOr => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", Token::LogicalOr, actual)
+            actual => fail_test(Token::LogicalOr, actual)
         }
     }
 
@@ -1375,10 +1389,9 @@ mod tests {
         let s = String::from("|=");
         let chars = s.chars().collect::<Vec<char>>();
         let cur = &mut 0;
-        let actual = next_token(&chars, cur);
-        match actual {
+        match next_token(&chars, cur) {
             Token::OrEquals => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", Token::OrEquals, actual)
+            actual => fail_test(Token::OrEquals, actual)
         }
     }
 
@@ -1389,10 +1402,9 @@ mod tests {
         let s = String::from("^");
         let chars = s.chars().collect::<Vec<char>>();
         let cur = &mut 0;
-        let actual = next_token(&chars, cur);
-        match actual {
+        match next_token(&chars, cur) {
             Token::BitwiseXor => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", Token::BitwiseXor, actual)
+            actual => fail_test(Token::BitwiseXor, actual)
         }
     }
 
@@ -1401,10 +1413,9 @@ mod tests {
         let s = String::from("^=");
         let chars = s.chars().collect::<Vec<char>>();
         let cur = &mut 0;
-        let actual = next_token(&chars, cur);
-        match actual {
+        match next_token(&chars, cur) {
             Token::XorEquals => (),
-            actual => panic!("Expected: {:?} | Actual: {:?}", Token::XorEquals, actual)
+            actual => fail_test(Token::XorEquals, actual)
         }
     }
 
@@ -1415,10 +1426,9 @@ mod tests {
         let literal = String::from("\"\"");
         let chars = literal.chars().collect::<Vec<char>>();
         let cur = &mut 0; 
-        let actual = next_token(&chars, cur);
-        match actual {
+        match next_token(&chars, cur) {
             Token::StringLiteral(literal) => assert_eq!(&literal, "\"\""), 
-            actual => panic!("Expected: {:?} | Actual: {:?}", Token::StringLiteral("\"\"".to_string()), actual)
+            actual => fail_test(Token::StringLiteral("\"\"".to_string()), actual)
         }
     }
 
@@ -1426,10 +1436,9 @@ mod tests {
     fn test_string_literal_1() {
         let chars = String::from("''").chars().collect::<Vec<char>>();
         let cur = &mut 0; 
-        let actual = next_token(&chars, cur);
-        match actual {
+        match next_token(&chars, cur) {
             Token::StringLiteral(path) => assert_eq!(&path, "''"), 
-            actual => panic!("Expected: {:?} | Actual: {:?}", Token::StringLiteral("''".to_string()), actual)
+            actual => fail_test(Token::StringLiteral("''".to_string()), actual)
         }
     }
 
@@ -1438,12 +1447,69 @@ mod tests {
         let path = String::from("\"test_file.sol\"");
         let chars = path.chars().collect::<Vec<char>>();
         let cur = &mut 0; 
-        let actual = next_token(&chars, cur);
-        match actual {
+        match next_token(&chars, cur) {
             Token::StringLiteral(path) => assert_eq!(&path, "\"test_file.sol\""), 
-            actual => panic!("Expected: {:?} | Actual: {:?}", Token::StringLiteral("\"test_file.sol\"".to_string()), actual)
+            actual => fail_test(Token::StringLiteral("\"test_file.sol\"".to_string()), actual)
         }
     }
 
     // TODO more string literal tests
+
+    /* Whitespace */
+
+    #[test]
+    fn test_whitespace_0() {
+        let chars = String::from(" ++").chars().collect::<Vec<char>>();
+        let cur = &mut 0;
+        match next_token(&chars, cur) {
+            Token::Increment => (),
+            actual => fail_test(Token::Increment, actual)
+        }
+    }
+
+    #[test]
+    fn test_whitespace_1() {
+        let chars = String::from("  ++").chars().collect::<Vec<char>>();
+        let cur = &mut 0;
+        match next_token(&chars, cur) {
+            Token::Increment => (),
+            actual => fail_test(Token::Increment, actual)
+        }
+    }
+
+    #[test]
+    fn test_whitespace_2() {
+        let chars = String::from(" ++  ").chars().collect::<Vec<char>>();
+        let cur = &mut 0;
+        match next_token(&chars, cur) {
+            Token::Increment => (),
+            actual => fail_test(Token::Increment, actual)
+        }
+        match next_token(&chars, cur) {
+            Token::NoMatch => (),
+            actual => fail_test(Token::NoMatch, actual)
+        }
+    }
+
+    #[test]
+    fn test_whitespace_3() {
+        let chars = String::from(" ++  -- / \"literal\"").chars().collect::<Vec<char>>();
+        let cur = &mut 0;
+        match next_token(&chars, cur) {
+            Token::Increment => (),
+            actual => fail_test(Token::Increment, actual)
+        }
+        match next_token(&chars, cur) {
+            Token::Decrement => (),
+            actual => fail_test(Token::Decrement, actual)
+        }
+        match next_token(&chars, cur) {
+            Token::Divide => (),
+            actual => fail_test(Token::Divide, actual)
+        }
+        match next_token(&chars, cur) {
+            Token::StringLiteral(literal) => assert_eq!(&literal, "\"literal\""),
+            actual => fail_test(Token::StringLiteral(String::from("\"literal\"")), actual)
+        }
+    }
 }
