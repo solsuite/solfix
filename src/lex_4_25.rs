@@ -91,6 +91,7 @@ pub enum Token {
     Hours,
     Identifier(String),
     If,
+    Illegal,
     Import,
     Increment,
     Indexed,
@@ -384,6 +385,10 @@ impl Token {
 
 trait LineMatch {
     fn match_idx(&self, idx: usize, val: char) -> bool;
+    fn is_digit_at(&self, idx: usize) -> bool;
+    fn is_rational_at(&self, idx: usize) -> bool;
+    fn is_hex_digit_at(&self, idx: usize) -> bool;
+    fn is_hex_delim_at(&self, idx: usize) -> bool;
 }
 
 impl LineMatch for Vec<char> {
@@ -393,17 +398,55 @@ impl LineMatch for Vec<char> {
             None => false
         }
     }
+
+    fn is_digit_at(&self, idx: usize) -> bool {
+        match self.get(idx) {
+            Some(v) => v.is_digit(10),
+            None => false
+        }
+    }
+
+    fn is_hex_digit_at(&self, idx: usize) -> bool {
+        match self.get(idx) {
+            Some(v) => v.is_digit(16),
+            None => false
+        }
+    }
+
+    fn is_rational_at(&self, idx: usize) -> bool {
+        match self.get(idx) {
+            Some(v) => v.is_rational(),
+            None => false
+        }
+    }
+
+    fn is_hex_delim_at(&self, idx: usize) -> bool {
+        match self.get(idx) {
+            Some(v) => *v == 'x' || *v == 'X',
+            None => false
+        }
+    }
 }
 
 trait CharExt {
     fn begins_identifier(&self) -> bool;
     fn is_whitespace(&self) -> bool;
+    fn is_rational(&self) -> bool;
 }
 
 impl CharExt for char {
     // If self could be the first character of an identifier, returns true
     fn begins_identifier(&self) -> bool {
         return *self == '_' || *self == '$' || self.is_ascii_alphabetic();
+    }
+
+    // Returns true if the char could be a part of a rational literal
+    fn is_rational(&self) -> bool {
+        return 
+            *self == 'e' || 
+            *self == 'E' || 
+            *self == '.' || 
+            self.is_digit(10);
     }
 
     // If self is whitespace, returns true
@@ -879,8 +922,86 @@ fn match_identifier_or_keyword(line: &Vec<char>, cur: &mut usize) -> Token {
     Token::NoMatch
 }
 
+/**
+ * Matches a leading '0'. If this does not correspond to a hex
+ * number, returns Token::Illegal
+ */
+fn match_hex_number(line: &Vec<char>, cur: &mut usize) -> Token {
+    let mut collected = String::new();
+    if !line.is_hex_delim_at(*cur + 1) {
+        return Token::Illegal;
+    }
+
+    collected.push(line[*cur]);
+    collected.push(line[*cur + 1]);
+    *cur += 2;
+
+    while *cur < line.len() && line.is_hex_digit_at(*cur) {
+        collected.push(line[*cur]);
+        *cur += 1;
+    }
+
+    // Cannot only have '0x', and cannot have an odd length
+    if collected.len() <= 2 || collected.len() % 2 != 0 {
+        return Token::Illegal;
+    } else {
+        return Token::HexNumber(collected);
+    }
+}
+
+/**
+ * Matches a decimal literal at line[*cur] and returns its Token
+ * TODO - this could use some cleaning up
+ */
 fn match_number(line: &Vec<char>, cur: &mut usize) -> Token {
-    Token::NoMatch
+    let mut collected = String::new();
+    let mut decimal_found = false;
+    let mut exponent_found = false;
+
+    // Leading 0's are disallowed
+    if line.match_idx(*cur, '0') {
+        if line.is_rational_at(*cur + 1) {
+            return Token::Illegal;
+        } else if !line.is_hex_delim_at(*cur + 1) {
+            return Token::DecimalNumber(String::from("0"));
+        } else {
+            return match_hex_number(line, cur);
+        }
+    }
+
+    while *cur < line.len() {
+        if line.match_idx(*cur, '.') {
+            // Cannot have 2 decimals, or a decimal after an exponent
+            // Allowed: { var a = 14.4; }
+            // Not allowed: { var a = 1.4.4; } || { var a = 1e4.5; }
+            if decimal_found || exponent_found {
+                return Token::Illegal;
+            } else {
+                decimal_found = true;
+            }
+        } else if line.match_idx(*cur, 'e') || line.match_idx(*cur, 'E') {
+            // Cannot have 2 exponents
+            if exponent_found {
+                return Token::Illegal;
+            } else {
+                // If we find an exponent, there must be at least 1 more digit
+                // (Trailing decimals are allowed, though!)
+                // Allowed: { var a = 14.; }
+                // Not allowed: { var a = 14e; }
+                if *cur + 1 == line.len() || !line[*cur + 1].is_digit(10) {
+                    return Token::Illegal;
+                } else {
+                    exponent_found = true;
+                }
+            }
+        } else if !line.is_digit_at(*cur) {
+            *cur -= 1;
+            return Token::DecimalNumber(collected);
+        }
+        collected.push(line[*cur]);
+        *cur += 1;
+    }
+    Token::DecimalNumber(collected)
 }
 
 /**
@@ -927,6 +1048,10 @@ pub fn next_token(line: &Vec<char>, cur: &mut usize) -> Token {
                 }
             }
         };
+
+        if t == Token::Illegal {
+            return t;
+        }
 
         *cur += 1;
         if t != Token::NoMatch || *cur == line.len() {
@@ -1510,6 +1635,122 @@ mod tests {
         match next_token(&chars, cur) {
             Token::StringLiteral(literal) => assert_eq!(&literal, "\"literal\""),
             actual => fail_test(Token::StringLiteral(String::from("\"literal\"")), actual)
+        }
+    }
+
+    /* Identifiers TODO */
+
+    /* Number literals */
+
+    #[test]
+    fn test_numbers_0() {
+        let chars = String::from("1 12+123").chars().collect::<Vec<char>>();
+        let cur = &mut 0;
+        match next_token(&chars, cur) {
+            Token::DecimalNumber(num) => assert_eq!(&num, "1"),
+            actual => fail_test(Token::DecimalNumber(String::from("1")), actual)
+        }
+        match next_token(&chars, cur) {
+            Token::DecimalNumber(num) => assert_eq!(&num, "12"),
+            actual => fail_test(Token::DecimalNumber(String::from("12")), actual)
+        }
+        match next_token(&chars, cur) {
+            Token::Plus => (),
+            actual => fail_test(Token::Plus, actual)
+        }
+        match next_token(&chars, cur) {
+            Token::DecimalNumber(num) => assert_eq!(&num, "123"),
+            actual => fail_test(Token::DecimalNumber(String::from("123")), actual)
+        }
+    }
+
+    #[test]
+    fn test_numbers_1() {
+        let chars = String::from("0 0.1 0e1.5").chars().collect::<Vec<char>>();
+        let cur = &mut 0;
+        match next_token(&chars, cur) {
+            Token::DecimalNumber(num) => assert_eq!(&num, "0"),
+            actual => fail_test(Token::DecimalNumber(String::from("0")), actual)
+        }
+        match next_token(&chars, cur) {
+            Token::Illegal => (),
+            actual => fail_test(Token::Illegal, actual)
+        }
+    }
+
+    #[test]
+    fn test_numbers_2() {
+        let chars = String::from("01234").chars().collect::<Vec<char>>();
+        let cur = &mut 0;
+        match next_token(&chars, cur) {
+            Token::Illegal => (),
+            actual => fail_test(Token::Illegal, actual)
+        }
+    }
+
+    #[test]
+    fn test_numbers_3() {
+        let chars = String::from("1.2e3 4E5").chars().collect::<Vec<char>>();
+        let cur = &mut 0;
+        match next_token(&chars, cur) {
+            Token::DecimalNumber(num) => assert_eq!(&num, "1.2e3"),
+            actual => fail_test(Token::DecimalNumber(String::from("1.2e3")), actual)
+        }
+        match next_token(&chars, cur) {
+            Token::DecimalNumber(num) => assert_eq!(&num, "4E5"),
+            actual => fail_test(Token::DecimalNumber(String::from("4E5")), actual)
+        }
+    }
+
+    #[test]
+    fn test_hex_numbers_0() {
+        let chars = String::from("0x").chars().collect::<Vec<char>>();
+        let cur = &mut 0;
+        match next_token(&chars, cur) {
+            Token::Illegal => (),
+            actual => fail_test(Token::Illegal, actual)
+        }
+    }
+
+    #[test]
+    fn test_hex_numbers_1() {
+        let chars = String::from(" 0x").chars().collect::<Vec<char>>();
+        let cur = &mut 0;
+        match next_token(&chars, cur) {
+            Token::Illegal => (),
+            actual => fail_test(Token::Illegal, actual)
+        }
+    }
+
+    #[test]
+    fn test_hex_numbers_2() {
+        let chars = String::from("0xFF 0 0xF").chars().collect::<Vec<char>>();
+        let cur = &mut 0;
+        match next_token(&chars, cur) {
+            Token::HexNumber(num) => assert_eq!(&num, "0xFF"),
+            actual => fail_test(Token::HexNumber(String::from("0xFF")), actual)
+        }
+        match next_token(&chars, cur) {
+            Token::DecimalNumber(num) => assert_eq!(&num, "0"),
+            actual => fail_test(Token::DecimalNumber(String::from("0")), actual)
+        }
+        match next_token(&chars, cur) {
+            Token::Illegal => (),
+            actual => fail_test(Token::Illegal, actual)
+        }
+    }
+
+    #[test]
+    fn test_hex_numbers_3() {
+        let chars = String::from("0x1F 0xZZ").chars().collect::<Vec<char>>();
+        let cur = &mut 0;
+        match next_token(&chars, cur) {
+            Token::HexNumber(num) => assert_eq!(&num, "0x1F"),
+            actual => fail_test(Token::HexNumber(String::from("0x1F")), actual)
+        }
+        match next_token(&chars, cur) {
+            Token::Illegal => (),
+            actual => fail_test(Token::Illegal, actual)
         }
     }
 }
