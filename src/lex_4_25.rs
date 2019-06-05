@@ -9,6 +9,7 @@ pub enum Token {
     As,
     Assembly,
     Assignment,
+    ASMAssign,
     BitwiseAnd,
     BitwiseOr,
     BitwiseXor,
@@ -53,6 +54,8 @@ pub enum Token {
     CloseParenthesis,
     Colon,
     Comma,
+    CommentMulti,
+    CommentSingle,
     Constant,
     Continue,
     Contract,
@@ -379,37 +382,16 @@ impl Token {
     }
 }
 
-trait StopToken {
-    fn is_stop_token(self) -> bool;
+trait LineMatch {
+    fn match_idx(&self, idx: usize, val: char) -> bool;
 }
 
-impl StopToken for char {
-    // If true, the lexer will stop reading at this Token
-    fn is_stop_token(self) -> bool {
-        if self.is_whitespace() ||
-           self == ';' ||
-           self == '{' ||
-           self == '}' ||
-           self == '(' ||
-           self == ')' ||
-           self == '[' ||
-           self == ']' ||
-           self == ',' ||
-           self == ':' ||
-           self == '!' ||
-           self == '~' ||
-           self == '*' ||
-           self == '/' ||
-           self == '+' ||
-           self == '-' ||
-           self == '=' ||
-           self == '>' ||
-           self == '<' ||
-           self == '!' ||
-           self == '.' {
-            return true;
-       }
-       return false; 
+impl LineMatch for Vec<char> {
+    fn match_idx(&self, idx: usize, val: char) -> bool {
+        match self.get(idx) {
+            Some(v) => v == &val,
+            None => false
+        }
     }
 }
 
@@ -595,162 +577,317 @@ fn match_collected(collected: String) -> Token {
     }
 }
 
+// TODO
+fn match_period(line: &Vec<char>, cur: &mut usize) -> Token {
+    Token::NoMatch
+}
+
+/**
+ * Matches : at line[*cur] with its corresponding Token
+ * :  | Colon
+ * := | ASMAssign
+ */
+fn match_colon(line: &Vec<char>, cur: &mut usize) -> Token {
+    if line.match_idx(*cur + 1, '=') {
+        *cur += 1;
+        return Token::ASMAssign;
+    } else {
+        return Token::Colon;
+    }
+}
+
+/**
+ * Matches = at line[*cur] with its corresponding Token
+ * =  | Set
+ * == | Equals
+ * => | Arrow
+ */
+fn match_equals(line: &Vec<char>, cur: &mut usize) -> Token {
+    if line.match_idx(*cur + 1, '=') {
+        *cur += 1;
+        return Token::Equals;
+    } else if line.match_idx(*cur + 1, '>') {
+        *cur += 1;
+        return Token::Arrow;
+    } else {
+        return Token::Set;
+    }
+}
+
+/**
+ * Matches + at line[*cur] with its corresponding Token
+ * +  | Plus
+ * ++ | Increment
+ * += | PlusEquals
+ */
+fn match_plus(line: &Vec<char>, cur: &mut usize) -> Token {
+    if line.match_idx(*cur + 1, '+') {
+        *cur += 1;
+        return Token::Increment;
+    } else if line.match_idx(*cur + 1, '=') {
+        *cur += 1;
+        return Token::PlusEquals;
+    } else {
+        return Token::Plus;
+    }
+}
+
+/**
+ * Matches - at line[*cur] with its corresponding Token
+ * -  | Minus
+ * -- | Decrement
+ * -= | MinusEquals
+ */
+fn match_minus(line: &Vec<char>, cur: &mut usize) -> Token {
+    if line.match_idx(*cur + 1, '-') {
+        *cur += 1;
+        return Token::Decrement;
+    } else if line.match_idx(*cur + 1, '=') {
+        *cur += 1;
+        return Token::MinusEquals;
+    } else {
+        return Token::Minus;
+    }
+}
+
+/**
+ * Matches * at line[*cur] with its corresponding Token
+ * *  | Multiply
+ * ** | Power
+ * *= | MultiplyEquals
+ */
+fn match_star(line: &Vec<char>, cur: &mut usize) -> Token {
+    if line.match_idx(*cur + 1, '*') {
+        *cur += 1;
+        return Token::Power;
+    } else if line.match_idx(*cur + 1, '=') {
+        *cur += 1;
+        return Token::MultiplyEquals;
+    } else {
+        return Token::Multiply;
+    }
+}
+
+/**
+ * Matches / at line[*cur] with its corresponding Token
+ * /  | Divide
+ * // | CommentSingle
+ * /* | CommentMulti */
+ * /= | DivideEquals
+ */
+fn match_slash(line: &Vec<char>, cur: &mut usize) -> Token {
+    if line.match_idx(*cur + 1, '=') {
+        *cur += 1;
+        return Token::DivideEquals;
+    } else if line.match_idx(*cur + 1, '/') {
+        *cur += 1;
+        return Token::CommentSingle;
+    } else if line.match_idx(*cur + 1, '*') {
+        *cur += 1;
+        return Token::CommentMulti;
+    } else {
+        return Token::Divide;
+    }
+}
+
+/**
+ * Matches > at line[*cur] with its corresponding Token
+ * >    | GreaterThen
+ * >=   | GreaterThanOrEquals
+ * >>   | ShiftRight
+ * >>=  | ShiftRightEquals
+ * >>>  | TODO
+ * >>>= | TODO
+ */
+fn match_rarrow(line: &Vec<char>, cur: &mut usize) -> Token {
+    if line.match_idx(*cur + 1, '=') {
+        *cur += 1;
+        return Token::GreaterThanOrEquals;
+    } else if line.match_idx(*cur + 1, '>') {
+        if line.match_idx(*cur + 2, '=') {
+            *cur += 2;
+            return Token::ShiftRightEquals;
+        } else if line.match_idx(*cur + 2, '>') {
+            if line.match_idx(*cur + 3, '=') {
+                *cur += 3;
+                return Token::NoMatch; // TODO
+            } else {
+                *cur += 2;
+                return Token::NoMatch; // TODO
+            }
+        } else {
+            *cur += 1;
+            return Token::ShiftRight;
+        }
+    } else {
+        return Token::GreaterThan;
+    }
+}
+
+/**
+ * Matches < at line[*cur] with its corresponding Token
+ * <    | LessThen
+ * <=   | LessThanOrEquals
+ * <<   | ShiftLeft
+ * <<=  | ShiftLeftEquals
+ */
+fn match_larrow(line: &Vec<char>, cur: &mut usize) -> Token {
+    if line.match_idx(*cur + 1, '=') {
+        *cur += 1;
+        return Token::LessThanOrEquals;
+    } else if line.match_idx(*cur + 1, '<') {
+        if line.match_idx(*cur + 2, '=') {
+            *cur += 2;
+            return Token::ShiftLeftEquals;
+        } else {
+            *cur += 1;
+            return Token::ShiftLeft;
+        }
+    } else {
+        return Token::LessThan;
+    }
+}
+
+/**
+ * Matches ! at line[*cur] with its corresponding Token
+ * !  | Exclamation
+ * != | NotEquals
+ */
+fn match_exclamation(line: &Vec<char>, cur: &mut usize) -> Token {
+    if line.match_idx(*cur + 1, '=') {
+        *cur += 1;
+        return Token::NotEquals;
+    } else {
+        return Token::Exclamation;
+    }
+}
+
+/**
+ * Matches % at line[*cur] with its corresponding Token
+ * %  | Modulus
+ * %= | ModEquals
+ */
+fn match_percent(line: &Vec<char>, cur: &mut usize) -> Token {
+    if line.match_idx(*cur + 1, '=') {
+        *cur += 1;
+        return Token::ModEquals;
+    } else {
+        return Token::Modulus;
+    }
+}
+
+/**
+ * Matches & at line[*cur] with its corresponding Token
+ * &  | BitwiseAnd
+ * && | LogicalAnd
+ * &= | AndEquals
+ */
+fn match_and(line: &Vec<char>, cur: &mut usize) -> Token {
+    if line.match_idx(*cur + 1, '&') {
+        *cur += 1;
+        return Token::LogicalAnd;
+    } else if line.match_idx(*cur + 1, '=') {
+        *cur += 1;
+        return Token::AndEquals;
+    } else {
+        return Token::BitwiseAnd;
+    }
+}
+
+/**
+ * Matches | at line[*cur] with its corresponding Token
+ * |  | BitwiseOr
+ * || | LogicalOr
+ * |= | OrEquals
+ */
+fn match_or(line: &Vec<char>, cur: &mut usize) -> Token {
+    if line.match_idx(*cur + 1, '|') {
+        *cur += 1;
+        return Token::LogicalOr;
+    } else if line.match_idx(*cur + 1, '=') {
+        *cur += 1;
+        return Token::OrEquals;
+    } else {
+        return Token::BitwiseOr;
+    }
+}
+
+/**
+ * Matches | at line[*cur] with its corresponding Token
+ * ^  | BitwiseXor
+ * ^= | XorEquals
+ */
+fn match_xor(line: &Vec<char>, cur: &mut usize) -> Token {
+    if line.match_idx(*cur + 1, '=') {
+        *cur += 1;
+        return Token::XorEquals;
+    } else {
+        return Token::BitwiseXor;
+    }
+}
+
+// TODO
+fn match_string(line: &Vec<char>, cur: &mut usize) -> Token {
+    let first_quote = line[*cur].to_string();
+    let mut collected = String::from(first_quote.clone());
+    *cur += 1;
+    while *cur < line.len() {
+        if line[*cur].to_string() == r"\".to_string() {
+            return Token::NoMatch; // TODO handle escapes
+        } else if line[*cur].to_string() == first_quote {
+            collected.push(line[*cur]);
+            *cur += 1;
+            return Token::StringLiteral(collected);
+        } else {
+            collected.push(line[*cur]);
+            *cur += 1;
+        }
+    }
+    Token::NoMatch
+}
+
+// TODO
+fn match_identifier(line: &Vec<char>, cur: &mut usize) -> Token {
+    Token::NoMatch
+}
+
 /**
  * Returns the next Token found in the line and increments cur
  * to the end of the Token in the parsed line
  */
 pub fn next_token(line: &Vec<char>, cur: &mut usize) -> Token {
-    let mut string = false;
-    let mut collected = String::new();
-    while *cur < line.len() {
-        // If no characters have been collected, we are reading a new Token
-        if collected.len() == 0 {
-            if line[*cur] == ';' {
-                *cur += 1;
-                return Token::Semicolon;
-            } else if line[*cur] == '{' {
-                *cur += 1;
-                return Token::OpenBrace;
-            } else if line[*cur] == '}' {
-                *cur += 1;
-                return Token::CloseBrace;
-            } else if line[*cur] == '(' {
-                *cur += 1;
-                return Token::OpenParenthesis;
-            } else if line[*cur] == ')' {
-                *cur += 1;
-                return Token::CloseParenthesis;
-            } else if line[*cur] == '[' {
-                *cur += 1;
-                return Token::OpenBracket;
-            } else if line[*cur] == ']' {
-                *cur += 1;
-                return Token::CloseBracket;
-            } else if line[*cur] == '?' {
-                *cur += 1;
-                return Token::Question;
-            } else if line[*cur] == ',' {
-                *cur += 1;
-                return Token::Comma;
-            } else if line[*cur] == ':' {
-                *cur += 1;
-                return Token::Colon;
-            }  else if line[*cur] == '~' {
-                *cur += 1;
-                return Token::Tilda;
-            } else if line[*cur] == '/' {
-                *cur += 1;
-                return Token::Divide;
-            } else if line[*cur] == '.' {
-                *cur += 1;
-                return Token::Dot;
-            } else if line[*cur] == '\"' {
-                collected.push(line[*cur]);
-                string = true;
-            } else if !line[*cur].is_whitespace() {
-                collected.push(line[*cur]);
-            } // else: do nothing, increment cur by 1
-        } else {
-            if string {
-                collected.push(line[*cur]);
-                if line[*cur] == '\"' {
-                    return Token::StringLiteral(collected);
-                }
-            } else if line[*cur] == '.' && (collected == "^0" || collected == "0" || collected == "^0.4" || collected == "0.4") {
-               collected.push('.');
-            } else if line[*cur] == '0' && collected == "^" {
-               collected.push('0');
-            } else if line[*cur] == '>' && collected == "=" {
-                *cur += 1;
-                return Token::Arrow;
-            } else if line[*cur] == '*' && collected == "*" {
-                *cur += 1;
-                return Token::Power;
-            } else if line[*cur] == '=' && collected == "=" {
-                *cur += 1;
-                return Token::Equals;
-            } else if line[*cur] == '=' && collected == "<" {
-                *cur += 1;
-                return Token::LessThanOrEquals;
-            } else if line[*cur] == '=' && collected == ">" {
-                *cur += 1;
-                return Token::GreaterThanOrEquals;
-            } else if line[*cur] == '=' && collected == "!" {
-                *cur += 1;
-                return Token::NotEquals;
-            } else if line[*cur] == '=' && collected == "|" {
-                *cur += 1;
-                return Token::OrEquals;
-            } else if line[*cur] == '=' && collected == "+" {
-                *cur += 1;
-                return Token::PlusEquals;
-            } else if line[*cur] == '=' && collected == "-" {
-                *cur += 1;
-                return Token::MinusEquals;
-            } else if line[*cur] == '=' && collected == "*" {
-                *cur += 1;
-                return Token::MultiplyEquals;
-            } else if line[*cur] == '=' && collected == "/" {
-                *cur += 1;
-                return Token::DivideEquals;
-            } else if line[*cur] == '=' && collected == "%" {
-                *cur += 1;
-                return Token::ModEquals;
-            } else if line[*cur] == '=' && collected == "<<" {
-                *cur += 1;
-                return Token::ShiftLeftEquals;
-            } else if line[*cur] == '=' && collected == ">>" {
-                *cur += 1;
-                return Token::ShiftRightEquals;
-            } else if line[*cur] == '+' && collected == "+" {
-                *cur += 1;
-                return Token::Increment;
-            } else if line[*cur] == '-' && collected == "-" {
-                *cur += 1;
-                return Token::Decrement;
-            } else if line[*cur] == '>' && collected == ">" {
-                *cur += 1;
-                return Token::ShiftRight;
-            } else if line[*cur] == '|' && collected == "|" {
-                *cur += 1;
-                return Token::LogicalOr; 
-            } else if line[*cur] == '&' && collected == "&" {
-                *cur += 1;
-                return Token::LogicalAnd;
-            } else if collected == "^" {
-                return Token::BitwiseXor;
-            } else if collected == "<<" {
-                return Token::ShiftLeft;
-            } else if collected == "-" {
-                return Token::Minus;
-            } else if collected == "+" {
-                return Token::Plus;
-            } else if collected == "|" {
-                return Token::BitwiseOr;
-            } else if collected == "&" {
-                return Token::BitwiseAnd;
-            } else if collected == "<" {
-                return Token::LessThan;
-            } else if collected == "=" {
-                return Token::Assignment;
-            } else if collected == "!" {
-                return Token::Exclamation;
-            } else if collected == ">" {
-                return Token::GreaterThan;
-            } else if collected == "*" {
-                return Token::Multiply;
-            } else if line[*cur].is_stop_token() {
-                return match_collected(collected);
-            } else {
-                collected.push(line[*cur]);
-            }
-        }
-        *cur += 1;
-    }
-    return match match_collected(collected) {
-        Token::NoMatch => Token::EOF,
-        other => other
-    }
+    let token = match line[*cur] {
+        ';' => Token::Semicolon,
+        '{' => Token::OpenBrace,
+        '}' => Token::CloseBrace,
+        '(' => Token::OpenParenthesis,
+        ')' => Token::CloseParenthesis,
+        '[' => Token::OpenBracket,
+        ']' => Token::CloseBracket,
+        '?' => Token::Question,
+        ',' => Token::Comma,
+        '~' => Token::Tilda,
+        '.' => match_period(line, cur),
+        ':' => match_colon(line, cur),          // : :=
+        '=' => match_equals(line, cur),         // = == =>
+        '+' => match_plus(line, cur),           // + ++ +=
+        '-' => match_minus(line, cur),          // - -- -=
+        '*' => match_star(line, cur),           // * ** *=
+        '/' => match_slash(line, cur),          // / // /* /=
+        '>' => match_rarrow(line, cur),         // > >= >> >>= >>> >>>=
+        '<' => match_larrow(line, cur),         // < <= << <<=
+        '!' => match_exclamation(line, cur),    // ! !=
+        '%' => match_percent(line, cur),        // % %=
+        '&' => match_and(line, cur),            // & && &=
+        '|' => match_or(line, cur),             // | || |=
+        '^' => match_xor(line, cur),            // ^ ^=
+        '"' | '\'' => match_string(line, cur),
+        _ => match_identifier(line, cur)
+    };
+
+    // TODO case NoMatch?
+    *cur += 1;
+    return token;
 }
 
 // Return the next token in the line, without incrementing cur
@@ -765,33 +902,539 @@ pub fn peek_token(line: &Vec<char>, cur: &mut usize) -> Token {
 mod tests {
     use super::*;
 
-    /* String Literal */
+    /* Colon */
 
     #[test]
-    fn string_literal_test1() {
-        let path = String::from("\"\"");
-        let chars = path.chars().collect::<Vec<char>>();
+    fn test_colon() {
+        let s = String::from(":");
+        let chars = s.chars().collect::<Vec<char>>();
+        let cur = &mut 0;
+        let actual = next_token(&chars, cur);
+        match actual {
+            Token::Colon => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", Token::Colon, actual)
+        }
+    }
+
+    #[test]
+    fn test_asmassign() {
+        let s = String::from(":=");
+        let chars = s.chars().collect::<Vec<char>>();
+        let cur = &mut 0;
+        let actual = next_token(&chars, cur);
+        match actual {
+            Token::ASMAssign => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", Token::ASMAssign, actual)
+        }
+    }
+
+    /* Equals  */
+
+    #[test]
+    fn test_set() {
+        let s = String::from("=");
+        let chars = s.chars().collect::<Vec<char>>();
+        let cur = &mut 0;
+        let actual = next_token(&chars, cur);
+        match actual {
+            Token::Set => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", Token::Set, actual)
+        }
+    }
+
+    #[test]
+    fn test_equals() {
+        let s = String::from("==");
+        let chars = s.chars().collect::<Vec<char>>();
+        let cur = &mut 0;
+        let actual = next_token(&chars, cur);
+        match actual {
+            Token::Equals => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", Token::Equals, actual)
+        }
+    }
+
+    #[test]
+    fn test_arrow() {
+        let s = String::from("=>");
+        let chars = s.chars().collect::<Vec<char>>();
+        let cur = &mut 0;
+        let actual = next_token(&chars, cur);
+        match actual {
+            Token::Arrow => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", Token::Arrow, actual)
+        }
+    }
+
+    /* Plus */
+
+    #[test]
+    fn test_plus() {
+        let s = String::from("+");
+        let chars = s.chars().collect::<Vec<char>>();
+        let cur = &mut 0;
+        let actual = next_token(&chars, cur);
+        match actual {
+            Token::Plus => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", Token::Plus, actual)
+        }
+    }
+
+    #[test]
+    fn test_increment() {
+        let s = String::from("++");
+        let chars = s.chars().collect::<Vec<char>>();
+        let cur = &mut 0;
+        let actual = next_token(&chars, cur);
+        match actual {
+            Token::Increment => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", Token::Increment, actual)
+        }
+    }
+
+    #[test]
+    fn test_plus_equals() {
+        let s = String::from("+=");
+        let chars = s.chars().collect::<Vec<char>>();
+        let cur = &mut 0;
+        let actual = next_token(&chars, cur);
+        match actual {
+            Token::PlusEquals => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", Token::PlusEquals, actual)
+        }
+    }
+
+    /* Minus */
+
+    #[test]
+    fn test_minus() {
+        let s = String::from("-");
+        let chars = s.chars().collect::<Vec<char>>();
+        let cur = &mut 0;
+        let actual = next_token(&chars, cur);
+        match actual {
+            Token::Minus => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", Token::Minus, actual)
+        }
+    }
+
+    #[test]
+    fn test_decrement() {
+        let s = String::from("--");
+        let chars = s.chars().collect::<Vec<char>>();
+        let cur = &mut 0;
+        let actual = next_token(&chars, cur);
+        match actual {
+            Token::Decrement => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", Token::Decrement, actual)
+        }
+    }
+
+    #[test]
+    fn test_minus_equals() {
+        let s = String::from("-=");
+        let chars = s.chars().collect::<Vec<char>>();
+        let cur = &mut 0;
+        let actual = next_token(&chars, cur);
+        match actual {
+            Token::MinusEquals => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", Token::MinusEquals, actual)
+        }
+    }
+
+    /* Star */
+
+    #[test]
+    fn test_multiply() {
+        let s = String::from("*");
+        let chars = s.chars().collect::<Vec<char>>();
+        let cur = &mut 0;
+        let actual = next_token(&chars, cur);
+        match actual {
+            Token::Multiply => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", Token::Multiply, actual)
+        }
+    }
+
+    #[test]
+    fn test_power() {
+        let s = String::from("**");
+        let chars = s.chars().collect::<Vec<char>>();
+        let cur = &mut 0;
+        let actual = next_token(&chars, cur);
+        match actual {
+            Token::Power => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", Token::Power, actual)
+        }
+    }
+
+    #[test]
+    fn test_multiply_equals() {
+        let s = String::from("*=");
+        let chars = s.chars().collect::<Vec<char>>();
+        let cur = &mut 0;
+        let actual = next_token(&chars, cur);
+        match actual {
+            Token::MultiplyEquals => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", Token::MultiplyEquals, actual)
+        }
+    }
+    
+    /* Slash */
+
+    #[test]
+    fn test_divide() {
+        let s = String::from("/");
+        let chars = s.chars().collect::<Vec<char>>();
+        let cur = &mut 0;
+        let actual = next_token(&chars, cur);
+        match actual {
+            Token::Divide => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", Token::Divide, actual)
+        }
+    }
+
+    #[test]
+    fn test_comment_single() {
+        let s = String::from("//");
+        let chars = s.chars().collect::<Vec<char>>();
+        let cur = &mut 0;
+        let actual = next_token(&chars, cur);
+        match actual {
+            Token::CommentSingle => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", Token::CommentSingle, actual)
+        }
+    }
+
+    #[test]
+    fn test_comment_multi() {
+        let s = String::from("/*");
+        let chars = s.chars().collect::<Vec<char>>();
+        let cur = &mut 0;
+        let actual = next_token(&chars, cur);
+        match actual {
+            Token::CommentMulti => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", Token::CommentMulti, actual)
+        }
+    }
+
+    #[test]
+    fn test_divide_equals() {
+        let s = String::from("/=");
+        let chars = s.chars().collect::<Vec<char>>();
+        let cur = &mut 0;
+        let actual = next_token(&chars, cur);
+        match actual {
+            Token::DivideEquals => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", Token::DivideEquals, actual)
+        }
+    }
+
+    /* RArrow */
+
+    #[test]
+    fn test_greater_than() {
+        let s = String::from(">");
+        let chars = s.chars().collect::<Vec<char>>();
+        let cur = &mut 0;
+        let actual = next_token(&chars, cur);
+        match actual {
+            Token::GreaterThan => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", Token::GreaterThan, actual)
+        }
+    }
+
+    #[test]
+    fn test_greater_than_or_equals() {
+        let s = String::from(">=");
+        let chars = s.chars().collect::<Vec<char>>();
+        let cur = &mut 0;
+        let actual = next_token(&chars, cur);
+        match actual {
+            Token::GreaterThanOrEquals => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", Token::GreaterThanOrEquals, actual)
+        }
+    }
+
+    #[test]
+    fn test_shift_right() {
+        let s = String::from(">>");
+        let chars = s.chars().collect::<Vec<char>>();
+        let cur = &mut 0;
+        let actual = next_token(&chars, cur);
+        match actual {
+            Token::ShiftRight => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", Token::ShiftRight, actual)
+        }
+    }
+
+    #[test]
+    fn test_shift_right_equals() {
+        let s = String::from(">>=");
+        let chars = s.chars().collect::<Vec<char>>();
+        let cur = &mut 0;
+        let actual = next_token(&chars, cur);
+        match actual {
+            Token::ShiftRightEquals => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", Token::ShiftRightEquals, actual)
+        }
+    }
+
+    #[test]
+    fn test_thing_0() { // TODO
+        let s = String::from(">>>");
+        let chars = s.chars().collect::<Vec<char>>();
+        let cur = &mut 0;
+        let actual = next_token(&chars, cur);
+        match actual {
+            Token::NoMatch => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", Token::NoMatch, actual)
+        }
+    }
+
+    #[test]
+    fn test_thing_1() { // TODO
+        let s = String::from(">>>=");
+        let chars = s.chars().collect::<Vec<char>>();
+        let cur = &mut 0;
+        let actual = next_token(&chars, cur);
+        match actual {
+            Token::NoMatch => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", Token::NoMatch, actual)
+        }
+    }
+
+    /* LArrow */
+
+    #[test]
+    fn test_less_than() {
+        let s = String::from("<");
+        let chars = s.chars().collect::<Vec<char>>();
+        let cur = &mut 0;
+        let actual = next_token(&chars, cur);
+        match actual {
+            Token::LessThan => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", Token::LessThan, actual)
+        }
+    }
+
+    #[test]
+    fn test_less_than_or_equals() {
+        let s = String::from("<=");
+        let chars = s.chars().collect::<Vec<char>>();
+        let cur = &mut 0;
+        let actual = next_token(&chars, cur);
+        match actual {
+            Token::LessThanOrEquals => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", Token::LessThanOrEquals, actual)
+        }
+    }
+
+    #[test]
+    fn test_shift_left() {
+        let s = String::from("<<");
+        let chars = s.chars().collect::<Vec<char>>();
+        let cur = &mut 0;
+        let actual = next_token(&chars, cur);
+        match actual {
+            Token::ShiftLeft => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", Token::ShiftLeft, actual)
+        }
+    }
+
+    #[test]
+    fn test_shift_left_equals() {
+        let s = String::from("<<=");
+        let chars = s.chars().collect::<Vec<char>>();
+        let cur = &mut 0;
+        let actual = next_token(&chars, cur);
+        match actual {
+            Token::ShiftLeftEquals => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", Token::ShiftLeftEquals, actual)
+        }
+    }
+
+    /* Exclamation */
+
+    #[test]
+    fn test_exclamation() {
+        let s = String::from("!");
+        let chars = s.chars().collect::<Vec<char>>();
+        let cur = &mut 0;
+        let actual = next_token(&chars, cur);
+        match actual {
+            Token::Exclamation => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", Token::Exclamation, actual)
+        }
+    }
+
+    #[test]
+    fn test_not_equals() {
+        let s = String::from("!=");
+        let chars = s.chars().collect::<Vec<char>>();
+        let cur = &mut 0;
+        let actual = next_token(&chars, cur);
+        match actual {
+            Token::NotEquals => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", Token::NotEquals, actual)
+        }
+    }
+
+    /* Percent */
+
+    #[test]
+    fn test_modulus() {
+        let s = String::from("%");
+        let chars = s.chars().collect::<Vec<char>>();
+        let cur = &mut 0;
+        let actual = next_token(&chars, cur);
+        match actual {
+            Token::Modulus => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", Token::Modulus, actual)
+        }
+    }
+
+    #[test]
+    fn test_mod_equals() {
+        let s = String::from("%=");
+        let chars = s.chars().collect::<Vec<char>>();
+        let cur = &mut 0;
+        let actual = next_token(&chars, cur);
+        match actual {
+            Token::ModEquals => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", Token::ModEquals, actual)
+        }
+    }
+
+    /* And */
+
+    #[test]
+    fn test_bitwise_and() {
+        let s = String::from("&");
+        let chars = s.chars().collect::<Vec<char>>();
+        let cur = &mut 0;
+        let actual = next_token(&chars, cur);
+        match actual {
+            Token::BitwiseAnd => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", Token::BitwiseAnd, actual)
+        }
+    }
+
+    #[test]
+    fn test_logical_and() {
+        let s = String::from("&&");
+        let chars = s.chars().collect::<Vec<char>>();
+        let cur = &mut 0;
+        let actual = next_token(&chars, cur);
+        match actual {
+            Token::LogicalAnd => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", Token::LogicalAnd, actual)
+        }
+    }
+
+    #[test]
+    fn test_and_equals() {
+        let s = String::from("&=");
+        let chars = s.chars().collect::<Vec<char>>();
+        let cur = &mut 0;
+        let actual = next_token(&chars, cur);
+        match actual {
+            Token::AndEquals => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", Token::AndEquals, actual)
+        }
+    }
+
+    /* Or */
+
+    #[test]
+    fn test_bitwise_or() {
+        let s = String::from("|");
+        let chars = s.chars().collect::<Vec<char>>();
+        let cur = &mut 0;
+        let actual = next_token(&chars, cur);
+        match actual {
+            Token::BitwiseOr => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", Token::BitwiseOr, actual)
+        }
+    }
+
+    #[test]
+    fn test_logical_or() {
+        let s = String::from("||");
+        let chars = s.chars().collect::<Vec<char>>();
+        let cur = &mut 0;
+        let actual = next_token(&chars, cur);
+        match actual {
+            Token::LogicalOr => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", Token::LogicalOr, actual)
+        }
+    }
+
+    #[test]
+    fn test_or_equals() {
+        let s = String::from("|=");
+        let chars = s.chars().collect::<Vec<char>>();
+        let cur = &mut 0;
+        let actual = next_token(&chars, cur);
+        match actual {
+            Token::OrEquals => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", Token::OrEquals, actual)
+        }
+    }
+
+    /* Xor */
+
+    #[test]
+    fn test_bitwise_xor() {
+        let s = String::from("^");
+        let chars = s.chars().collect::<Vec<char>>();
+        let cur = &mut 0;
+        let actual = next_token(&chars, cur);
+        match actual {
+            Token::BitwiseXor => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", Token::BitwiseXor, actual)
+        }
+    }
+
+    #[test]
+    fn test_xor_equals() {
+        let s = String::from("^=");
+        let chars = s.chars().collect::<Vec<char>>();
+        let cur = &mut 0;
+        let actual = next_token(&chars, cur);
+        match actual {
+            Token::XorEquals => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", Token::XorEquals, actual)
+        }
+    }
+
+    /* StringLiteral */
+
+    #[test]
+    fn test_string_literal_0() {
+        let literal = String::from("\"\"");
+        let chars = literal.chars().collect::<Vec<char>>();
         let cur = &mut 0; 
         let actual = next_token(&chars, cur);
         match actual {
-            Token::StringLiteral(path) => assert_eq!(&path, "\"\""), 
+            Token::StringLiteral(literal) => assert_eq!(&literal, "\"\""), 
             actual => panic!("Expected: {:?} | Actual: {:?}", Token::StringLiteral("\"\"".to_string()), actual)
         }
     }
 
     #[test]
-    fn string_literal_test2() {
-        let chars = String::from("\"test_file\"").chars().collect::<Vec<char>>();
+    fn test_string_literal_1() {
+        let chars = String::from("''").chars().collect::<Vec<char>>();
         let cur = &mut 0; 
         let actual = next_token(&chars, cur);
         match actual {
-            Token::StringLiteral(path) => assert_eq!(&path, "\"test_file\""), 
-            actual => panic!("Expected: {:?} | Actual: {:?}", Token::StringLiteral("\"test_file\"".to_string()), actual)
+            Token::StringLiteral(path) => assert_eq!(&path, "''"), 
+            actual => panic!("Expected: {:?} | Actual: {:?}", Token::StringLiteral("''".to_string()), actual)
         }
     }
 
     #[test]
-    fn string_literal_test3() {
+    fn test_string_literal_2() {
         let path = String::from("\"test_file.sol\"");
         let chars = path.chars().collect::<Vec<char>>();
         let cur = &mut 0; 
@@ -801,4 +1444,6 @@ mod tests {
             actual => panic!("Expected: {:?} | Actual: {:?}", Token::StringLiteral("\"test_file.sol\"".to_string()), actual)
         }
     }
+
+    // TODO more string literal tests
 }
