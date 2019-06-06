@@ -429,15 +429,26 @@ impl LineMatch for Vec<char> {
 }
 
 trait CharExt {
-    fn begins_identifier(&self) -> bool;
+    fn starts_rational(&self) -> bool;
+    fn starts_iden_or_keyword(&self) -> bool;
+    fn is_iden_or_keyword_part(&self) -> bool;
     fn is_whitespace(&self) -> bool;
     fn is_rational(&self) -> bool;
 }
 
 impl CharExt for char {
+    // Not allowed: Leading 0, leading 'e'
+    fn starts_rational(&self) -> bool {
+        return (self.is_digit(10) || *self == '.') && *self != '0';
+    }
+
     // If self could be the first character of an identifier, returns true
-    fn begins_identifier(&self) -> bool {
+    fn starts_iden_or_keyword(&self) -> bool {
         return *self == '_' || *self == '$' || self.is_ascii_alphabetic();
+    }
+
+    fn is_iden_or_keyword_part(&self) -> bool {
+        return self.starts_iden_or_keyword() || self.is_digit(10);
     }
 
     // Returns true if the char could be a part of a rational literal
@@ -919,7 +930,12 @@ fn skip_whitespace(line: &Vec<char>, cur: &mut usize) -> Token {
 
 // TODO
 fn match_identifier_or_keyword(line: &Vec<char>, cur: &mut usize) -> Token {
-    Token::NoMatch
+    let mut collected = String::new();
+    while *cur < line.len() && line[*cur].is_iden_or_keyword_part() {
+        collected.push(line[*cur]);
+        *cur += 1;
+    }
+    return match_collected(collected);
 }
 
 /**
@@ -928,7 +944,7 @@ fn match_identifier_or_keyword(line: &Vec<char>, cur: &mut usize) -> Token {
  */
 fn match_hex_number(line: &Vec<char>, cur: &mut usize) -> Token {
     let mut collected = String::new();
-    if !line.is_hex_delim_at(*cur + 1) {
+    if !line.is_hex_delim_at(*cur + 1) { // err here
         return Token::Illegal;
     }
 
@@ -953,7 +969,7 @@ fn match_hex_number(line: &Vec<char>, cur: &mut usize) -> Token {
  * Matches a decimal literal at line[*cur] and returns its Token
  * TODO - this could use some cleaning up
  */
-fn match_number(line: &Vec<char>, cur: &mut usize) -> Token {
+fn match_rational(line: &Vec<char>, cur: &mut usize) -> Token {
     let mut collected = String::new();
     let mut decimal_found = false;
     let mut exponent_found = false;
@@ -1010,6 +1026,8 @@ fn match_number(line: &Vec<char>, cur: &mut usize) -> Token {
  */
 pub fn next_token(line: &Vec<char>, cur: &mut usize) -> Token {
     let mut next = Token::NoMatch;
+    // let mut output = String::with_capacity(line.len());
+    // https://lise-henry.github.io/articles/optimising_strings.html
     loop {
         let t = match line[*cur] {
             ';' => Token::Semicolon,
@@ -1038,15 +1056,18 @@ pub fn next_token(line: &Vec<char>, cur: &mut usize) -> Token {
             '^' => match_xor(line, cur),            // ^ ^=
             '"' | '\'' => match_string(line, cur),
             ' ' => skip_whitespace(line, cur),
-            c => {
-                if c.begins_identifier() {
-                    match_identifier_or_keyword(line, cur)
-                } else if c.is_digit(10) {
-                    match_number(line, cur)
+            '0' => {
+                if line.match_idx(*cur + 1, ' ') {
+                    Token::DecimalNumber(String::from("0"))
+                } else if line.is_hex_delim_at(*cur + 1) {
+                    match_hex_number(line, cur)
                 } else {
-                    Token::NoMatch
+                    Token::Illegal
                 }
-            }
+            },
+            n if n.starts_rational() => match_rational(line, cur),
+            c if c.starts_iden_or_keyword() => match_identifier_or_keyword(line, cur),
+            _ => Token::Illegal
         };
 
         if t == Token::Illegal {
@@ -1074,508 +1095,374 @@ pub fn peek_token(line: &Vec<char>, cur: &mut usize) -> Token {
 mod tests {
     use super::*;
 
+    trait AsString {
+        fn as_string(&self) -> String;
+    }
+
+    impl AsString for Vec<char> {
+        fn as_string(&self) -> String {
+            return self.into_iter().collect();
+        }
+    }
+
     fn fail_test(expect: Token, actual: Token) {
         panic!("Expected: {:?} | Actual: {:?}", expect, actual);
+    }
+
+    fn to_chars(string: &str) -> Vec<char> {
+        return string.chars().collect::<Vec<char>>();
+    }
+
+    fn to_identifier(string: &str) -> Token {
+        return Token::Identifier(to_chars(string).as_string());
+    }
+
+    fn to_string_literal(string: &str) -> Token {
+        return Token::StringLiteral(to_chars(string).as_string());
+    }
+
+    fn to_decimal_number(string: &str) -> Token {
+        return Token::DecimalNumber(to_chars(string).as_string());
+    }
+
+    fn to_hex_number(string: &str) -> Token {
+        return Token::HexNumber(to_chars(string).as_string());
+    }
+
+    fn expect_next_token(s: &Vec<char>, cur: &mut usize, t: Token) {
+        match next_token(&s, cur) {
+            ref next if *next == t => (),
+            actual => fail_test(t, actual)
+        };
     }
 
     /* Colon */
 
     #[test]
     fn test_colon() {
-        let s = String::from(":");
-        let chars = s.chars().collect::<Vec<char>>();
+        let s = to_chars(":");
         let cur = &mut 0;
-        match next_token(&chars, cur) {
-            Token::Colon => (),
-            actual => fail_test(Token::Colon, actual)
-        }
+        expect_next_token(&s, cur, Token::Colon);
     }
 
     #[test]
     fn test_asmassign() {
-        let s = String::from(":=");
-        let chars = s.chars().collect::<Vec<char>>();
+        let s = to_chars(":=");
         let cur = &mut 0;
-        match next_token(&chars, cur) {
-            Token::ASMAssign => (),
-            actual => fail_test(Token::ASMAssign, actual)
-        }
+        expect_next_token(&s, cur, Token::ASMAssign);
     }
 
     /* Equals  */
 
     #[test]
     fn test_set() {
-        let s = String::from("=");
-        let chars = s.chars().collect::<Vec<char>>();
+        let s = to_chars("=");
         let cur = &mut 0;
-        match next_token(&chars, cur) {
-            Token::Set => (),
-            actual => fail_test(Token::Set, actual)
-        }
+        expect_next_token(&s, cur, Token::Set);
     }
 
     #[test]
     fn test_equals() {
-        let s = String::from("==");
-        let chars = s.chars().collect::<Vec<char>>();
+        let s = to_chars("==");
         let cur = &mut 0;
-        match next_token(&chars, cur) {
-            Token::Equals => (),
-            actual => fail_test(Token::Equals, actual)
-        }
+        expect_next_token(&s, cur, Token::Equals);
     }
 
     #[test]
     fn test_arrow() {
-        let s = String::from("=>");
-        let chars = s.chars().collect::<Vec<char>>();
+        let s = to_chars("=>");
         let cur = &mut 0;
-        match next_token(&chars, cur) {
-            Token::Arrow => (),
-            actual => fail_test(Token::Arrow, actual)
-        }
+        expect_next_token(&s, cur, Token::Arrow);
     }
 
     /* Plus */
 
     #[test]
     fn test_plus() {
-        let s = String::from("+");
-        let chars = s.chars().collect::<Vec<char>>();
+        let s = to_chars("+");
         let cur = &mut 0;
-        match next_token(&chars, cur) {
-            Token::Plus => (),
-            actual => fail_test(Token::Plus, actual)
-        }
+        expect_next_token(&s, cur, Token::Plus);
     }
 
     #[test]
     fn test_increment() {
-        let s = String::from("++");
-        let chars = s.chars().collect::<Vec<char>>();
+        let s = to_chars("++");
         let cur = &mut 0;
-        match next_token(&chars, cur) {
-            Token::Increment => (),
-            actual => fail_test(Token::Increment, actual)
-        }
+        expect_next_token(&s, cur, Token::Increment);
     }
 
     #[test]
     fn test_plus_equals() {
-        let s = String::from("+=");
-        let chars = s.chars().collect::<Vec<char>>();
+        let s = to_chars("+=");
         let cur = &mut 0;
-        match next_token(&chars, cur) {
-            Token::PlusEquals => (),
-            actual => fail_test(Token::PlusEquals, actual)
-        }
+        expect_next_token(&s, cur, Token::PlusEquals);
     }
 
     /* Minus */
 
     #[test]
     fn test_minus() {
-        let s = String::from("-");
-        let chars = s.chars().collect::<Vec<char>>();
+        let s = to_chars("-");
         let cur = &mut 0;
-        match next_token(&chars, cur) {
-            Token::Minus => (),
-            actual => fail_test(Token::Minus, actual)
-        }
+        expect_next_token(&s, cur, Token::Minus);
     }
 
     #[test]
     fn test_decrement() {
-        let s = String::from("--");
-        let chars = s.chars().collect::<Vec<char>>();
+        let s = to_chars("--");
         let cur = &mut 0;
-        match next_token(&chars, cur) {
-            Token::Decrement => (),
-            actual => fail_test(Token::Decrement, actual)
-        }
+        expect_next_token(&s, cur, Token::Decrement);
     }
 
     #[test]
     fn test_minus_equals() {
-        let s = String::from("-=");
-        let chars = s.chars().collect::<Vec<char>>();
+        let s = to_chars("-=");
         let cur = &mut 0;
-        match next_token(&chars, cur) {
-            Token::MinusEquals => (),
-            actual => fail_test(Token::MinusEquals, actual)
-        }
+        expect_next_token(&s, cur, Token::MinusEquals);
     }
 
     /* Star */
 
     #[test]
     fn test_multiply() {
-        let s = String::from("*");
-        let chars = s.chars().collect::<Vec<char>>();
+        let s = to_chars("*");
         let cur = &mut 0;
-        match next_token(&chars, cur) {
-            Token::Multiply => (),
-            actual => fail_test(Token::Multiply, actual)
-        }
+        expect_next_token(&s, cur, Token::Multiply);
     }
 
     #[test]
     fn test_power() {
-        let s = String::from("**");
-        let chars = s.chars().collect::<Vec<char>>();
+        let s = to_chars("**");
         let cur = &mut 0;
-        match next_token(&chars, cur) {
-            Token::Power => (),
-            actual => fail_test(Token::Power, actual)
-        }
+        expect_next_token(&s, cur, Token::Power);
     }
 
     #[test]
     fn test_multiply_equals() {
-        let s = String::from("*=");
-        let chars = s.chars().collect::<Vec<char>>();
+        let s = to_chars("*=");
         let cur = &mut 0;
-        match next_token(&chars, cur) {
-            Token::MultiplyEquals => (),
-            actual => fail_test(Token::MultiplyEquals, actual)
-        }
+        expect_next_token(&s, cur, Token::MultiplyEquals);
     }
     
     /* Slash */
 
     #[test]
     fn test_divide() {
-        let s = String::from("/");
-        let chars = s.chars().collect::<Vec<char>>();
+        let s = to_chars("/");
         let cur = &mut 0;
-        match next_token(&chars, cur) {
-            Token::Divide => (),
-            actual => fail_test(Token::Divide, actual)
-        }
+        expect_next_token(&s, cur, Token::Divide);
     }
 
     #[test]
     fn test_comment_single() {
-        let s = String::from("//");
-        let chars = s.chars().collect::<Vec<char>>();
+        let s = to_chars("//");
         let cur = &mut 0;
-        match next_token(&chars, cur) {
-            Token::CommentSingle => (),
-            actual => fail_test(Token::CommentSingle, actual)
-        }
+        expect_next_token(&s, cur, Token::CommentSingle);
     }
 
     #[test]
     fn test_comment_multi() {
-        let s = String::from("/*");
-        let chars = s.chars().collect::<Vec<char>>();
+        let s = to_chars("/*");
         let cur = &mut 0;
-        match next_token(&chars, cur) {
-            Token::CommentMulti => (),
-            actual => fail_test(Token::CommentMulti, actual)
-        }
+        expect_next_token(&s, cur, Token::CommentMulti);
     }
 
     #[test]
     fn test_divide_equals() {
-        let s = String::from("/=");
-        let chars = s.chars().collect::<Vec<char>>();
+        let s = to_chars("/=");
         let cur = &mut 0;
-        match next_token(&chars, cur) {
-            Token::DivideEquals => (),
-            actual => fail_test(Token::DivideEquals, actual)
-        }
+        expect_next_token(&s, cur, Token::DivideEquals);
     }
 
     /* RArrow */
 
     #[test]
     fn test_greater_than() {
-        let s = String::from(">");
-        let chars = s.chars().collect::<Vec<char>>();
+        let s = to_chars(">");
         let cur = &mut 0;
-        match next_token(&chars, cur) {
-            Token::GreaterThan => (),
-            actual => fail_test(Token::GreaterThan, actual)
-        }
+        expect_next_token(&s, cur, Token::GreaterThan);
     }
 
     #[test]
     fn test_greater_than_or_equals() {
-        let s = String::from(">=");
-        let chars = s.chars().collect::<Vec<char>>();
+        let s = to_chars(">=");
         let cur = &mut 0;
-        match next_token(&chars, cur) {
-            Token::GreaterThanOrEquals => (),
-            actual => fail_test(Token::GreaterThanOrEquals, actual)
-        }
+        expect_next_token(&s, cur, Token::GreaterThanOrEquals);
     }
 
     #[test]
     fn test_shift_right() {
-        let s = String::from(">>");
-        let chars = s.chars().collect::<Vec<char>>();
+        let s = to_chars(">>");
         let cur = &mut 0;
-        match next_token(&chars, cur) {
-            Token::ShiftRight => (),
-            actual => fail_test(Token::ShiftRight, actual)
-        }
+        expect_next_token(&s, cur, Token::ShiftRight);
     }
 
     #[test]
     fn test_shift_right_equals() {
-        let s = String::from(">>=");
-        let chars = s.chars().collect::<Vec<char>>();
+        let s = to_chars(">>=");
         let cur = &mut 0;
-        match next_token(&chars, cur) {
-            Token::ShiftRightEquals => (),
-            actual => fail_test(Token::ShiftRightEquals, actual)
-        }
+        expect_next_token(&s, cur, Token::ShiftRightEquals);
     }
 
     #[test]
     fn test_thing_0() { // TODO
-        let s = String::from(">>>");
-        let chars = s.chars().collect::<Vec<char>>();
+        let s = to_chars(">>>");
         let cur = &mut 0;
-        match next_token(&chars, cur) {
-            Token::NoMatch => (),
-            actual => fail_test(Token::NoMatch, actual)
-        }
+        expect_next_token(&s, cur, Token::NoMatch);
     }
 
     #[test]
     fn test_thing_1() { // TODO
-        let s = String::from(">>>=");
-        let chars = s.chars().collect::<Vec<char>>();
+        let s = to_chars(">>>=");
         let cur = &mut 0;
-        match next_token(&chars, cur) {
-            Token::NoMatch => (),
-            actual => fail_test(Token::NoMatch, actual)
-        }
+        expect_next_token(&s, cur, Token::NoMatch);
     }
 
     /* LArrow */
 
     #[test]
     fn test_less_than() {
-        let s = String::from("<");
-        let chars = s.chars().collect::<Vec<char>>();
+        let s = to_chars("<");
         let cur = &mut 0;
-        match next_token(&chars, cur) {
-            Token::LessThan => (),
-            actual => fail_test(Token::LessThan, actual)
-        }
+        expect_next_token(&s, cur, Token::LessThan);
     }
 
     #[test]
     fn test_less_than_or_equals() {
-        let s = String::from("<=");
-        let chars = s.chars().collect::<Vec<char>>();
+        let s = to_chars("<=");
         let cur = &mut 0;
-        match next_token(&chars, cur) {
-            Token::LessThanOrEquals => (),
-            actual => fail_test(Token::LessThanOrEquals, actual)
-        }
+        expect_next_token(&s, cur, Token::LessThanOrEquals);
     }
 
     #[test]
     fn test_shift_left() {
-        let s = String::from("<<");
-        let chars = s.chars().collect::<Vec<char>>();
+        let s = to_chars("<<");
         let cur = &mut 0;
-        match next_token(&chars, cur) {
-            Token::ShiftLeft => (),
-            actual => fail_test(Token::ShiftLeft, actual)
-        }
+        expect_next_token(&s, cur, Token::ShiftLeft);
     }
 
     #[test]
     fn test_shift_left_equals() {
-        let s = String::from("<<=");
-        let chars = s.chars().collect::<Vec<char>>();
+        let s = to_chars("<<=");
         let cur = &mut 0;
-        match next_token(&chars, cur) {
-            Token::ShiftLeftEquals => (),
-            actual => fail_test(Token::ShiftLeftEquals, actual)
-        }
+        expect_next_token(&s, cur, Token::ShiftLeftEquals);
     }
 
     /* Exclamation */
 
     #[test]
     fn test_exclamation() {
-        let s = String::from("!");
-        let chars = s.chars().collect::<Vec<char>>();
+        let s = to_chars("!");
         let cur = &mut 0;
-        match next_token(&chars, cur) {
-            Token::Exclamation => (),
-            actual => fail_test(Token::Exclamation, actual)
-        }
+        expect_next_token(&s, cur, Token::Exclamation);
     }
 
     #[test]
     fn test_not_equals() {
-        let s = String::from("!=");
-        let chars = s.chars().collect::<Vec<char>>();
+        let s = to_chars("!=");
         let cur = &mut 0;
-        match next_token(&chars, cur) {
-            Token::NotEquals => (),
-            actual => fail_test(Token::NotEquals, actual)
-        }
+        expect_next_token(&s, cur, Token::NotEquals);
     }
 
     /* Percent */
 
     #[test]
     fn test_modulus() {
-        let s = String::from("%");
-        let chars = s.chars().collect::<Vec<char>>();
+        let s = to_chars("%");
         let cur = &mut 0;
-        match next_token(&chars, cur) {
-            Token::Modulus => (),
-            actual => fail_test(Token::Modulus, actual)
-        }
+        expect_next_token(&s, cur, Token::Modulus);
     }
 
     #[test]
     fn test_mod_equals() {
-        let s = String::from("%=");
-        let chars = s.chars().collect::<Vec<char>>();
+        let s = to_chars("%=");
         let cur = &mut 0;
-        match next_token(&chars, cur) {
-            Token::ModEquals => (),
-            actual => fail_test(Token::ModEquals, actual)
-        }
+        expect_next_token(&s, cur, Token::ModEquals);
     }
 
     /* And */
 
     #[test]
     fn test_bitwise_and() {
-        let s = String::from("&");
-        let chars = s.chars().collect::<Vec<char>>();
+        let s = to_chars("&");
         let cur = &mut 0;
-        match next_token(&chars, cur) {
-            Token::BitwiseAnd => (),
-            actual => fail_test(Token::BitwiseAnd, actual)
-        }
+        expect_next_token(&s, cur, Token::BitwiseAnd);
     }
 
     #[test]
     fn test_logical_and() {
-        let s = String::from("&&");
-        let chars = s.chars().collect::<Vec<char>>();
+        let s = to_chars("&&");
         let cur = &mut 0;
-        match next_token(&chars, cur) {
-            Token::LogicalAnd => (),
-            actual => fail_test(Token::LogicalAnd, actual)
-        }
+        expect_next_token(&s, cur, Token::LogicalAnd);
     }
 
     #[test]
     fn test_and_equals() {
-        let s = String::from("&=");
-        let chars = s.chars().collect::<Vec<char>>();
+        let s = to_chars("&=");
         let cur = &mut 0;
-        match next_token(&chars, cur) {
-            Token::AndEquals => (),
-            actual => fail_test(Token::AndEquals, actual)
-        }
+        expect_next_token(&s, cur, Token::AndEquals);
     }
 
     /* Or */
 
     #[test]
     fn test_bitwise_or() {
-        let s = String::from("|");
-        let chars = s.chars().collect::<Vec<char>>();
+        let s = to_chars("|");
         let cur = &mut 0;
-        match next_token(&chars, cur) {
-            Token::BitwiseOr => (),
-            actual => fail_test(Token::BitwiseOr, actual)
-        }
+        expect_next_token(&s, cur, Token::BitwiseOr);
     }
 
     #[test]
     fn test_logical_or() {
-        let s = String::from("||");
-        let chars = s.chars().collect::<Vec<char>>();
+        let s = to_chars("||");
         let cur = &mut 0;
-        match next_token(&chars, cur) {
-            Token::LogicalOr => (),
-            actual => fail_test(Token::LogicalOr, actual)
-        }
+        expect_next_token(&s, cur, Token::LogicalOr);
     }
 
     #[test]
     fn test_or_equals() {
-        let s = String::from("|=");
-        let chars = s.chars().collect::<Vec<char>>();
+        let s = to_chars("|=");
         let cur = &mut 0;
-        match next_token(&chars, cur) {
-            Token::OrEquals => (),
-            actual => fail_test(Token::OrEquals, actual)
-        }
+        expect_next_token(&s, cur, Token::OrEquals);
     }
 
     /* Xor */
 
     #[test]
     fn test_bitwise_xor() {
-        let s = String::from("^");
-        let chars = s.chars().collect::<Vec<char>>();
+        let s = to_chars("^");
         let cur = &mut 0;
-        match next_token(&chars, cur) {
-            Token::BitwiseXor => (),
-            actual => fail_test(Token::BitwiseXor, actual)
-        }
+        expect_next_token(&s, cur, Token::BitwiseXor);
     }
 
     #[test]
     fn test_xor_equals() {
-        let s = String::from("^=");
-        let chars = s.chars().collect::<Vec<char>>();
+        let s = to_chars("^=");
         let cur = &mut 0;
-        match next_token(&chars, cur) {
-            Token::XorEquals => (),
-            actual => fail_test(Token::XorEquals, actual)
-        }
+        expect_next_token(&s, cur, Token::XorEquals);
     }
 
     /* StringLiteral */
 
     #[test]
     fn test_string_literal_0() {
-        let literal = String::from("\"\"");
-        let chars = literal.chars().collect::<Vec<char>>();
+        let s = to_chars("\"\"");
         let cur = &mut 0; 
-        match next_token(&chars, cur) {
-            Token::StringLiteral(literal) => assert_eq!(&literal, "\"\""), 
-            actual => fail_test(Token::StringLiteral("\"\"".to_string()), actual)
-        }
+        expect_next_token(&s, cur, Token::StringLiteral(s.as_string()));
     }
 
     #[test]
     fn test_string_literal_1() {
-        let chars = String::from("''").chars().collect::<Vec<char>>();
+        let s = to_chars("''");
         let cur = &mut 0; 
-        match next_token(&chars, cur) {
-            Token::StringLiteral(path) => assert_eq!(&path, "''"), 
-            actual => fail_test(Token::StringLiteral("''".to_string()), actual)
-        }
+        expect_next_token(&s, cur, Token::StringLiteral(s.as_string()));
     }
 
     #[test]
     fn test_string_literal_2() {
-        let path = String::from("\"test_file.sol\"");
-        let chars = path.chars().collect::<Vec<char>>();
+        let s = to_chars("\"test.sol\"");
         let cur = &mut 0; 
-        match next_token(&chars, cur) {
-            Token::StringLiteral(path) => assert_eq!(&path, "\"test_file.sol\""), 
-            actual => fail_test(Token::StringLiteral("\"test_file.sol\"".to_string()), actual)
-        }
+        expect_next_token(&s, cur, Token::StringLiteral(s.as_string()));
     }
 
     // TODO more string literal tests
@@ -1584,58 +1471,27 @@ mod tests {
 
     #[test]
     fn test_whitespace_0() {
-        let chars = String::from(" ++").chars().collect::<Vec<char>>();
+        let s = to_chars(" ++");
         let cur = &mut 0;
-        match next_token(&chars, cur) {
-            Token::Increment => (),
-            actual => fail_test(Token::Increment, actual)
-        }
+        expect_next_token(&s, cur, Token::Increment);
     }
 
     #[test]
     fn test_whitespace_1() {
-        let chars = String::from("  ++").chars().collect::<Vec<char>>();
+        let s = to_chars("  ++  +");
         let cur = &mut 0;
-        match next_token(&chars, cur) {
-            Token::Increment => (),
-            actual => fail_test(Token::Increment, actual)
-        }
-    }
-
-    #[test]
-    fn test_whitespace_2() {
-        let chars = String::from(" ++  ").chars().collect::<Vec<char>>();
-        let cur = &mut 0;
-        match next_token(&chars, cur) {
-            Token::Increment => (),
-            actual => fail_test(Token::Increment, actual)
-        }
-        match next_token(&chars, cur) {
-            Token::NoMatch => (),
-            actual => fail_test(Token::NoMatch, actual)
-        }
+        expect_next_token(&s, cur, Token::Increment);
+        expect_next_token(&s, cur, Token::Plus);
     }
 
     #[test]
     fn test_whitespace_3() {
-        let chars = String::from(" ++  -- / \"literal\"").chars().collect::<Vec<char>>();
+        let s = to_chars(" ++  -- / \"literal\"");
         let cur = &mut 0;
-        match next_token(&chars, cur) {
-            Token::Increment => (),
-            actual => fail_test(Token::Increment, actual)
-        }
-        match next_token(&chars, cur) {
-            Token::Decrement => (),
-            actual => fail_test(Token::Decrement, actual)
-        }
-        match next_token(&chars, cur) {
-            Token::Divide => (),
-            actual => fail_test(Token::Divide, actual)
-        }
-        match next_token(&chars, cur) {
-            Token::StringLiteral(literal) => assert_eq!(&literal, "\"literal\""),
-            actual => fail_test(Token::StringLiteral(String::from("\"literal\"")), actual)
-        }
+        expect_next_token(&s, cur, Token::Increment);
+        expect_next_token(&s, cur, Token::Decrement);
+        expect_next_token(&s, cur, Token::Divide);
+        expect_next_token(&s, cur, to_string_literal("\"literal\""));
     }
 
     /* Identifiers TODO */
@@ -1644,113 +1500,74 @@ mod tests {
 
     #[test]
     fn test_numbers_0() {
-        let chars = String::from("1 12+123").chars().collect::<Vec<char>>();
+        let s= to_chars("1 12+123");
         let cur = &mut 0;
-        match next_token(&chars, cur) {
-            Token::DecimalNumber(num) => assert_eq!(&num, "1"),
-            actual => fail_test(Token::DecimalNumber(String::from("1")), actual)
-        }
-        match next_token(&chars, cur) {
-            Token::DecimalNumber(num) => assert_eq!(&num, "12"),
-            actual => fail_test(Token::DecimalNumber(String::from("12")), actual)
-        }
-        match next_token(&chars, cur) {
-            Token::Plus => (),
-            actual => fail_test(Token::Plus, actual)
-        }
-        match next_token(&chars, cur) {
-            Token::DecimalNumber(num) => assert_eq!(&num, "123"),
-            actual => fail_test(Token::DecimalNumber(String::from("123")), actual)
-        }
+        expect_next_token(&s, cur, to_decimal_number("1"));
+        expect_next_token(&s, cur, to_decimal_number("12"));
+        expect_next_token(&s, cur, Token::Plus);
+        expect_next_token(&s, cur, to_decimal_number("123"));
     }
 
     #[test]
     fn test_numbers_1() {
-        let chars = String::from("0 0.1 0e1.5").chars().collect::<Vec<char>>();
+        let s = to_chars("0 0.1");
         let cur = &mut 0;
-        match next_token(&chars, cur) {
-            Token::DecimalNumber(num) => assert_eq!(&num, "0"),
-            actual => fail_test(Token::DecimalNumber(String::from("0")), actual)
-        }
-        match next_token(&chars, cur) {
-            Token::Illegal => (),
-            actual => fail_test(Token::Illegal, actual)
-        }
+        expect_next_token(&s, cur, to_decimal_number("0"));
+        expect_next_token(&s, cur, Token::Illegal);
     }
 
     #[test]
     fn test_numbers_2() {
-        let chars = String::from("01234").chars().collect::<Vec<char>>();
+        let s = to_chars("01234");
         let cur = &mut 0;
-        match next_token(&chars, cur) {
-            Token::Illegal => (),
-            actual => fail_test(Token::Illegal, actual)
-        }
+        expect_next_token(&s, cur, Token::Illegal);
     }
 
     #[test]
     fn test_numbers_3() {
-        let chars = String::from("1.2e3 4E5").chars().collect::<Vec<char>>();
+        let s = to_chars("1.2e3 4E5");
         let cur = &mut 0;
-        match next_token(&chars, cur) {
-            Token::DecimalNumber(num) => assert_eq!(&num, "1.2e3"),
-            actual => fail_test(Token::DecimalNumber(String::from("1.2e3")), actual)
-        }
-        match next_token(&chars, cur) {
-            Token::DecimalNumber(num) => assert_eq!(&num, "4E5"),
-            actual => fail_test(Token::DecimalNumber(String::from("4E5")), actual)
-        }
+        expect_next_token(&s, cur, to_decimal_number("1.2e3"));
+        expect_next_token(&s, cur, to_decimal_number("4E5"));
     }
 
     #[test]
     fn test_hex_numbers_0() {
-        let chars = String::from("0x").chars().collect::<Vec<char>>();
+        let s = to_chars("0x");
         let cur = &mut 0;
-        match next_token(&chars, cur) {
-            Token::Illegal => (),
-            actual => fail_test(Token::Illegal, actual)
-        }
+        expect_next_token(&s, cur, Token::Illegal);
     }
 
     #[test]
     fn test_hex_numbers_1() {
-        let chars = String::from(" 0x").chars().collect::<Vec<char>>();
+        let s = to_chars("0xFF 0 0xF");
         let cur = &mut 0;
-        match next_token(&chars, cur) {
-            Token::Illegal => (),
-            actual => fail_test(Token::Illegal, actual)
-        }
+        expect_next_token(&s, cur, to_hex_number("0xFF"));
+        expect_next_token(&s, cur, to_decimal_number("0"));
+        expect_next_token(&s, cur, Token::Illegal);
     }
 
     #[test]
     fn test_hex_numbers_2() {
-        let chars = String::from("0xFF 0 0xF").chars().collect::<Vec<char>>();
+        let s = to_chars("0xdf 0xZZ");
         let cur = &mut 0;
-        match next_token(&chars, cur) {
-            Token::HexNumber(num) => assert_eq!(&num, "0xFF"),
-            actual => fail_test(Token::HexNumber(String::from("0xFF")), actual)
-        }
-        match next_token(&chars, cur) {
-            Token::DecimalNumber(num) => assert_eq!(&num, "0"),
-            actual => fail_test(Token::DecimalNumber(String::from("0")), actual)
-        }
-        match next_token(&chars, cur) {
-            Token::Illegal => (),
-            actual => fail_test(Token::Illegal, actual)
-        }
+        expect_next_token(&s, cur, to_hex_number("0xdf"));
+        expect_next_token(&s, cur, Token::Illegal);
     }
 
+    // TODO add a test for each keyword
+
     #[test]
-    fn test_hex_numbers_3() {
-        let chars = String::from("0x1F 0xZZ").chars().collect::<Vec<char>>();
+    fn test_multi() {
+        let s = to_chars("contract A { function (); }");
         let cur = &mut 0;
-        match next_token(&chars, cur) {
-            Token::HexNumber(num) => assert_eq!(&num, "0x1F"),
-            actual => fail_test(Token::HexNumber(String::from("0x1F")), actual)
-        }
-        match next_token(&chars, cur) {
-            Token::Illegal => (),
-            actual => fail_test(Token::Illegal, actual)
-        }
+        expect_next_token(&s, cur, Token::Contract);
+        expect_next_token(&s, cur, to_identifier("A"));
+        expect_next_token(&s, cur, Token::OpenBrace);
+        expect_next_token(&s, cur, Token::Function);
+        expect_next_token(&s, cur, Token::OpenParenthesis);
+        expect_next_token(&s, cur, Token::CloseParenthesis);
+        expect_next_token(&s, cur, Token::Semicolon);
+        expect_next_token(&s, cur, Token::CloseBrace);
     }
 }
