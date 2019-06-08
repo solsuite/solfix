@@ -1,11 +1,11 @@
 use super::lex_4_25;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct ParseTree {
     pub children: Vec<ParseNode>
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ParseNode {
     pub node: lex_4_25::Token,
     pub children: Vec<Box<ParseNode>>
@@ -38,7 +38,7 @@ impl ParseNode {
 
 impl lex_4_25::Token {
     // Returns a new node, given a token
-    fn to_leaf(self) -> ParseNode {
+    pub fn to_leaf(self) -> ParseNode {
         ParseNode { node: self, children: vec![] }
     }
 }

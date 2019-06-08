@@ -1,6 +1,6 @@
 use regex::Regex;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Token {
     Address,
     AndEquals,
