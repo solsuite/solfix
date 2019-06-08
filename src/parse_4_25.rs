@@ -82,10 +82,10 @@ pub fn parse(input: String) -> ParseTree {
 
 pub fn parse_pragma(chars: &Vec<char>, cur: &mut usize) -> ParseNode { 
     let mut result = ParseNode::empty();
-    match lex_4_25::next_token(chars, cur) {
+    match lex_4_25::next_token(chars, cur) { 
         lex_4_25::Token::Pragma => result.node = lex_4_25::Token::Pragma,
         _ => panic!("Invalid pragma declaration")
-    }
+    } 
     match lex_4_25::next_token(chars, cur) {
         lex_4_25::Token::Identifier(name) => {
             if name != "solidity" {
@@ -122,16 +122,16 @@ fn parse_contract(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
     let mut result = ParseNode::empty();
     match lex_4_25::next_token(chars, cur) {
         lex_4_25::Token::Contract => result.node = lex_4_25::Token::Contract,
-        _ => panic!("1Invalid contract definition")
+        _ => panic!("Invalid contract definition")
     }
     match lex_4_25::next_token(chars, cur) {
         id@lex_4_25::Token::Identifier(..) => result.add_child(id),
-        _ => panic!("2Invalid contract definition")
+        _ => panic!("Invalid contract definition")
     }
     match lex_4_25::next_token(chars, cur) {
         lex_4_25::Token::OpenBrace => (),
         lex_4_25::Token::Is => is = true,
-        _ => panic!("3Invalid contract definition")
+        _ => panic!("Invalid contract definition")
     }
     if is {
         let mut stop = false;
@@ -147,13 +147,13 @@ fn parse_contract(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
         if let lex_4_25::Token::OpenBrace = lex_4_25::next_token(chars, cur) {
             result.children.push(Box::new(is_node));
         } else {
-            panic!("4Invalid contract definition")
+            panic!("Invalid contract definition")
         }
     }
     result.children.push(Box::new(parse_contract_part(chars, cur)));
     match lex_4_25::next_token(chars, cur) {
         lex_4_25::Token::CloseBrace => (),
-        actual => panic!("5Invalid contract definition {:?}", actual)
+        actual => panic!("Invalid contract definition {:?}", actual)
     }
     result
 }
@@ -176,6 +176,7 @@ fn parse_contract_part(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
     let mut result = lex_4_25::Token::OpenBrace.to_leaf(); 
     match lex_4_25::peek_token(chars, cur) {
         lex_4_25::Token::Enum => result.children.push(Box::new(parse_enum_definition(chars, cur))),
+        lex_4_25::Token::Event => result.children.push(Box::new(parse_event_definition(chars, cur))),
         lex_4_25::Token::Function => result.children.push(Box::new(parse_function_definition(chars, cur))),
         lex_4_25::Token::Modifier => result.children.push(Box::new(parse_modifier_definition(chars, cur))),
         _ => () 
@@ -214,6 +215,73 @@ fn parse_enum_definition(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
     match lex_4_25::next_token(chars, cur) {
         lex_4_25::Token::CloseBrace => (),
         _ => panic!("Invalid enum definition")
+    }
+    result
+}
+
+fn parse_event_definition(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
+    let mut result = lex_4_25::Token::Event.to_leaf();
+    match lex_4_25::next_token(chars, cur) {
+        lex_4_25::Token::Event => (),
+        _ => panic!("Invalid event definition")
+    }
+    match lex_4_25::next_token(chars, cur) {
+        id @ lex_4_25::Token::Identifier(..) => result.add_child(id),
+        _ => panic!("Invalid event definition")
+    }
+    result.children.push(Box::new(parse_event_parameter_list(chars, cur)));
+    match lex_4_25::peek_token(chars, cur) {
+        lex_4_25::Token::Anonymous => result.add_child(lex_4_25::next_token(chars, cur)),
+        _ => (),
+    }
+    match lex_4_25::next_token(chars, cur) {
+        lex_4_25::Token::Semicolon => (),
+        _ => panic!("Invalid event definition")
+    }
+    result
+}
+
+fn parse_event_parameter_list(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
+    let mut result = lex_4_25::Token::OpenParenthesis.to_leaf();
+    match lex_4_25::next_token(chars, cur) {
+        lex_4_25::Token::OpenParenthesis => (),
+        _ => panic!("Invalid event parameter list")
+    }
+    let mut stop = false;
+    while !stop {
+        match lex_4_25::peek_token(chars, cur) {
+            lex_4_25::Token::CloseParenthesis => stop = true,
+            _ => result.children.push(Box::new(parse_event_parameter(chars, cur)))
+        }
+        match lex_4_25::peek_token(chars, cur) {
+            lex_4_25::Token::Comma => { 
+                lex_4_25::next_token(chars, cur);
+            }
+            lex_4_25::Token::CloseParenthesis => stop = true,
+            _ => panic!("Invalid event parameter list")
+        }
+    }
+    match lex_4_25::next_token(chars, cur) {
+        lex_4_25::Token::CloseParenthesis => (),
+        _ => panic!("Invalid event parameter list")
+    }
+    result
+}
+
+fn parse_event_parameter(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
+    let mut result = lex_4_25::Token::EventParameter.to_leaf();
+    result.children.push(Box::new(parse_type_name(chars, cur)));
+    match lex_4_25::peek_token(chars, cur) {
+        lex_4_25::Token::Indexed => result.add_child(lex_4_25::next_token(chars, cur)),
+        _ => ()
+    }
+    match lex_4_25::peek_token(chars, cur) {
+        lex_4_25::Token::Identifier(..) => result.add_child(lex_4_25::next_token(chars, cur)),
+        lex_4_25::Token::From => {
+            result.add_child(lex_4_25::Token::Identifier("from".to_string()));
+            lex_4_25::next_token(chars, cur);
+        }
+        _ => ()
     }
     result
 }
@@ -314,24 +382,23 @@ fn parse_block(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
 // statements, *do while statements, *placeholder statements, *continue, *break, *return, 
 // *throw, *emit statements, *simple statments (* - must be followed by a semicolon).
 fn parse_statement(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
-    let mut result = ParseNode::empty();
-    match lex_4_25::next_token(chars, cur) {
-        lex_4_25::Token::If => result.children.push(Box::new(parse_if_statement(chars, cur))),
-        lex_4_25::Token::While => result.children.push(Box::new(parse_while_statement(chars, cur))),
-        lex_4_25::Token::For => result.children.push(Box::new(parse_for_statement(chars, cur))),
-        lex_4_25::Token::Assembly => result.children.push(Box::new(parse_inline_assembly_statement(chars, cur))),
-        lex_4_25::Token::Do => result.children.push(Box::new(parse_do_while_statement(chars, cur))),
+    return match lex_4_25::peek_token(chars, cur) {
+        lex_4_25::Token::If => parse_if_statement(chars, cur),
+        lex_4_25::Token::While => parse_while_statement(chars, cur),
+        lex_4_25::Token::For => parse_for_statement(chars, cur),
+        lex_4_25::Token::Assembly => parse_inline_assembly_statement(chars, cur),
+        lex_4_25::Token::Do => parse_do_while_statement(chars, cur),
         lex_4_25::Token::Placeholder => {
-            result.add_child(lex_4_25::Token::Placeholder);
+            lex_4_25::next_token(chars, cur);
             match lex_4_25::next_token(chars, cur) {
                 lex_4_25::Token::Semicolon => (),
                 _ => panic!("Invalid statement")
             }
+            lex_4_25::Token::Placeholder.to_leaf()
         }
-        lex_4_25::Token::Emit => result.children.push(Box::new(parse_emit_statement(chars, cur))),
+        lex_4_25::Token::Emit => parse_emit_statement(chars, cur),
         _ => panic!("Invalid statement")
     }
-    result
 }
 
 fn parse_if_statement(_chars: &Vec<char>, _cur: &mut usize) -> ParseNode { ParseNode::empty() }
@@ -344,7 +411,23 @@ fn parse_inline_assembly_statement(_chars: &Vec<char>, _cur: &mut usize) -> Pars
 
 fn parse_do_while_statement(_chars: &Vec<char>, _cur: &mut usize) -> ParseNode { ParseNode::empty() }
 
-fn parse_emit_statement(_chars: &Vec<char>, _cur: &mut usize) -> ParseNode { ParseNode::empty() }
+fn parse_emit_statement(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
+    let mut result = lex_4_25::Token::Emit.to_leaf();
+    match lex_4_25::next_token(chars, cur) {
+        lex_4_25::Token::Emit => (),
+        _ => panic!("Invalid emit statement")
+    }
+    result.children.push(Box::new(parse_expression(chars, cur)));
+    match &result.children[0].node {
+        lex_4_25::Token::OpenParenthesis => (),
+        _ => panic!("Invalid emit statement")
+    }
+    match lex_4_25::next_token(chars, cur) {
+        lex_4_25::Token::Semicolon => (),
+        _ => panic!("Invalid emit statement")
+    }
+    result
+}
 
 /*** Expression ***/
 
@@ -411,7 +494,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: ParseNode) -> Parse
             return parse_operation(&chars, cur, result);
         }
         lex_4_25::Token::OpenParenthesis => {
-            result.node = lex_4_25::Token::Function;
+            result.node = lex_4_25::Token::OpenParenthesis;
             result.children.push(Box::new(left));
             result.children.push(Box::new(parse_function_call_arguments(&chars, cur)));
             let right = parse_expression(&chars, cur);
@@ -813,24 +896,22 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: ParseNode) -> Parse
 
 fn parse_function_call_arguments(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
     let result;
-    let mut next = lex_4_25::next_token(&chars, cur);
-    match next {
+    match lex_4_25::next_token(chars, cur) {
         lex_4_25::Token::OpenParenthesis => (),
         _ => panic!("Invalid function call")
     }
-    next = lex_4_25::peek_token(&chars, cur);
-    match next {
+    match lex_4_25::peek_token(chars, cur) {
         lex_4_25::Token::OpenBrace => {
-            lex_4_25::next_token(&chars, cur);
-            result = parse_name_value_list(&chars, cur);
-            match lex_4_25::next_token(&chars, cur) {
+            lex_4_25::next_token(chars, cur);
+            result = parse_name_value_list(chars, cur);
+            match lex_4_25::next_token(chars, cur) {
                 lex_4_25::Token::CloseBrace => (),
                 _ => panic!("Invalid function call")
             }
         }
-        _ => result = parse_expression_list(&chars, cur)
+        _ => result = parse_expression_list(chars, cur)
     }
-    match lex_4_25::next_token(&chars, cur) {
+    match lex_4_25::next_token(chars, cur) {
         lex_4_25::Token::CloseParenthesis => return result,
         _ => panic!("Invalid function call")
     }
@@ -865,15 +946,14 @@ fn parse_name_value_list(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
 
 pub fn parse_expression(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
     let mut result = ParseNode{ node: lex_4_25::Token::NoMatch, children: vec![] };
-    let mut peek = lex_4_25::peek_token(&chars, cur);
-    match peek {
+    match lex_4_25::peek_token(&chars, cur) {
         lex_4_25::Token::New => {
             result.node = lex_4_25::next_token(&chars, cur);
             result.children.push(Box::new(parse_type_name(&chars, cur)));
         }
         lex_4_25::Token::DecimalNumber(..) | lex_4_25::Token::HexNumber(..) => {
             let mut left = lex_4_25::next_token(&chars, cur).to_leaf();
-            peek = lex_4_25::peek_token(&chars, cur);
+            let peek = lex_4_25::peek_token(&chars, cur);
             if peek.is_number_unit() {
                  left.add_child(lex_4_25::next_token(&chars, cur));  
             }
@@ -954,7 +1034,7 @@ pub fn parse_type_name(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
                 // array brackets.
                 parse_array_type_name(chars, cur, elementary.to_leaf())
             } else {
-                panic!("Invalid type name {:?}", elementary)
+                panic!("Invalid type name")
             }
         }
     }
@@ -1000,7 +1080,6 @@ fn parse_mapping(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
         _ => panic!("Invalid mapping")
     }
     result.children.push(Box::new(parse_type_name(chars, cur)));
-    println!("{:?}", result);
     match lex_4_25::next_token(chars, cur) {
         lex_4_25::Token::CloseParenthesis => (),
         _ => panic!("Invalid mapping")
@@ -1100,3 +1179,4 @@ fn parse_function_type_parameter(chars: &Vec<char>, cur: &mut usize) -> ParseNod
     }
     result
 }
+

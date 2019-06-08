@@ -197,11 +197,81 @@ mod parse_tests {
     }
 
     #[test]
-    fn contract_event_test1() { }
+    fn contract_event_test1() { 
+        let tree = parse(String::from("contract Event { event emptyEvent(); }"));
+        assert_eq!(tree.children.len(), 1);
+        match &tree.children[0].children[0].node {
+            lex_4_25::Token::Identifier(contract) => assert_eq!(contract, &"Event"),
+            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::Identifier("Event".to_string()), actual)
+        }
+        match &tree.children[0].children[1].node {
+            lex_4_25::Token::OpenBrace => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::OpenBrace, actual)
+        }
+        assert_eq!(tree.children[0].children[0].children.len(), 0);
+        assert_eq!(tree.children[0].children[1].children.len(), 1);
+        match &tree.children[0].children[1].children[0].node {
+            lex_4_25::Token::Event => (),
+            actual => panic!("Expected: {:?} | Actual {:?}", lex_4_25::Token::Event, actual)
+        }
+        assert_eq!(tree.children[0].children[1].children[0].children.len(), 2);
+        match &tree.children[0].children[1].children[0].children[0].node {
+            lex_4_25::Token::Identifier(empty) => assert_eq!(empty, &"emptyEvent"),
+            actual => panic!("Expected: {:?} | Actual {:?}", lex_4_25::Token::Identifier("emptyEvent".to_string()), actual)
+        }
+        match &tree.children[0].children[1].children[0].children[1].node {
+            lex_4_25::Token::OpenParenthesis => (),
+            actual => panic!("Expected: {:?} | Actual {:?}", lex_4_25::Token::OpenParenthesis, actual)
+        }
+    }
+
+    #[test]
+    fn contract_event_test2() { 
+        let tree = parse(String::from("contract Event { event Transfer(address indexed from, address indexed to, uint256 indexed value); }"));
+        assert_eq!(tree.children.len(), 1);
+        match &tree.children[0].children[0].node {
+            lex_4_25::Token::Identifier(contract) => assert_eq!(contract, &"Event"),
+            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::Identifier("Event".to_string()), actual)
+        }
+        match &tree.children[0].children[1].node {
+            lex_4_25::Token::OpenBrace => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::OpenBrace, actual)
+        }
+        assert_eq!(tree.children[0].children[0].children.len(), 0);
+        assert_eq!(tree.children[0].children[1].children.len(), 1);
+        match &tree.children[0].children[1].children[0].node {
+            lex_4_25::Token::Event => (),
+            actual => panic!("Expected: {:?} | Actual {:?}", lex_4_25::Token::Event, actual)
+        }
+        assert_eq!(tree.children[0].children[1].children[0].children.len(), 2);
+        match &tree.children[0].children[1].children[0].children[0].node {
+            lex_4_25::Token::Identifier(empty) => assert_eq!(empty, &"Transfer"),
+            actual => panic!("Expected: {:?} | Actual {:?}", lex_4_25::Token::Identifier("Transfer".to_string()), actual)
+        }
+        match &tree.children[0].children[1].children[0].children[1].node {
+            lex_4_25::Token::OpenParenthesis => (),
+            actual => panic!("Expected: {:?} | Actual {:?}", lex_4_25::Token::OpenParenthesis, actual)
+        }
+        assert_eq!(tree.children[0].children[1].children[0].children[0].children.len(), 0);
+        assert_eq!(tree.children[0].children[1].children[0].children[1].children.len(), 3);
+        match &tree.children[0].children[1].children[0].children[1].children[0].node {
+            lex_4_25::Token::EventParameter => (),
+            actual => panic!("Expected: {:?} | Actual {:?}", lex_4_25::Token::EventParameter, actual)
+        }
+        match &tree.children[0].children[1].children[0].children[1].children[1].node {
+            lex_4_25::Token::EventParameter => (),
+            actual => panic!("Expected: {:?} | Actual {:?}", lex_4_25::Token::EventParameter, actual)
+        }
+        match &tree.children[0].children[1].children[0].children[1].children[2].node {
+            lex_4_25::Token::EventParameter => (),
+            actual => panic!("Expected: {:?} | Actual {:?}", lex_4_25::Token::EventParameter, actual)
+        }
+    }
 
     #[test]
     fn contract_function_test1() { 
         let tree = parse(String::from("contract Function { function doNothing() internal pure { } }"));
+        println!("{:?}", tree);
         assert_eq!(tree.children.len(), 1);
         match &tree.children[0].node {
             lex_4_25::Token::Contract => (),
@@ -220,7 +290,7 @@ mod parse_tests {
         assert_eq!(tree.children[0].children[1].children.len(), 1);
         match &tree.children[0].children[1].children[0].node {
             lex_4_25::Token::Function => (),
-            actual => panic!("Expected: {:?} | Actual {:?}", lex_4_25::Token::Modifier, actual)
+            actual => panic!("Expected: {:?} | Actual {:?}", lex_4_25::Token::Function, actual)
         }
         assert_eq!(tree.children[0].children[1].children[0].children.len(), 5);
         match &tree.children[0].children[1].children[0].children[0].node {
@@ -248,6 +318,91 @@ mod parse_tests {
         assert_eq!(tree.children[0].children[1].children[0].children[2].children.len(), 0);
         assert_eq!(tree.children[0].children[1].children[0].children[3].children.len(), 0);
         assert_eq!(tree.children[0].children[1].children[0].children[4].children.len(), 0);
+    }
+
+    #[test]
+    fn contract_function_test2() { 
+        let tree = parse(String::from("contract Function { function emitEvent() internal { emit someEvent(1 + 1); } }"));
+        assert_eq!(tree.children.len(), 1);
+        match &tree.children[0].node {
+            lex_4_25::Token::Contract => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::Contract, actual)
+        }
+        assert_eq!(tree.children[0].children.len(), 2);
+        match &tree.children[0].children[0].node {
+            lex_4_25::Token::Identifier(contract) => assert_eq!(contract, &"Function"),
+            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::Identifier("Function".to_string()), actual)
+        }
+        match &tree.children[0].children[1].node {
+            lex_4_25::Token::OpenBrace => (),
+            actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::OpenBrace, actual)
+        }
+        assert_eq!(tree.children[0].children[0].children.len(), 0);
+        assert_eq!(tree.children[0].children[1].children.len(), 1);
+        let mut tree = *tree.children[0].children[1].clone();
+        match &tree.children[0].node {
+            lex_4_25::Token::Function => (),
+            actual => panic!("Expected: {:?} | Actual {:?}", lex_4_25::Token::Function, actual)
+        }
+        assert_eq!(tree.children[0].children.len(), 4);
+        match &tree.children[0].children[0].node {
+            lex_4_25::Token::Identifier(function) => assert_eq!(function, &"emitEvent"),
+            actual => panic!("Expected: {:?} | Actual {:?}", lex_4_25::Token::Identifier("emitEvent".to_string()), actual)
+        }
+        match &tree.children[0].children[1].node {
+            lex_4_25::Token::OpenParenthesis => (),
+            actual => panic!("Expected: {:?} | Actual {:?}", lex_4_25::Token::OpenParenthesis, actual)
+        }
+        match &tree.children[0].children[2].node {
+            lex_4_25::Token::Internal => (),
+            actual => panic!("Expected: {:?} | Actual {:?}", lex_4_25::Token::Internal, actual)
+        }
+        match &tree.children[0].children[3].node {
+            lex_4_25::Token::OpenBrace => (),
+            actual => panic!("Expected: {:?} | Actual {:?}", lex_4_25::Token::OpenBrace, actual)
+        }
+        assert_eq!(tree.children[0].children[0].children.len(), 0);
+        assert_eq!(tree.children[0].children[1].children.len(), 0);
+        assert_eq!(tree.children[0].children[2].children.len(), 0);
+        assert_eq!(tree.children[0].children[3].children.len(), 1);
+        tree = *tree.children[0].children[3].clone();
+        match &tree.children[0].node {
+            lex_4_25::Token::Emit => (),
+            actual => panic!("Expected: {:?} | Actual {:?}", lex_4_25::Token::Emit, actual)
+        }
+        assert_eq!(tree.children[0].children.len(), 1);
+        match &tree.children[0].children[0].node {
+            lex_4_25::Token::OpenParenthesis => (),
+            actual => panic!("Expected: {:?} | Actual {:?}", lex_4_25::Token::OpenParenthesis, actual)
+        }
+        assert_eq!(tree.children[0].children[0].children.len(), 2);
+        tree = *tree.children[0].children[0].clone();
+        match &tree.children[0].node {
+            lex_4_25::Token::Identifier(some_event) => assert_eq!(some_event, &"someEvent"),
+            actual => panic!("Expected: {:?} | Actual {:?}", lex_4_25::Token::Identifier("someEvent".to_string()), actual)
+        }
+        match &tree.children[1].node {
+            lex_4_25::Token::OpenParenthesis => (),
+            actual => panic!("Expected: {:?} | Actual {:?}", lex_4_25::Token::OpenParenthesis, actual)
+        }
+        assert_eq!(tree.children[0].children.len(), 0);
+        assert_eq!(tree.children[1].children.len(), 1);
+        tree = *tree.children[1].clone();
+        match &tree.children[0].node {
+            lex_4_25::Token::Plus => (),
+            actual => panic!("Expected: {:?} | Actual {:?}", lex_4_25::Token::Plus, actual)
+        }
+        assert_eq!(tree.children[0].children.len(), 2);
+        match &tree.children[0].children[0].node {
+            lex_4_25::Token::DecimalNumber(num) => assert_eq!(num, &"1"),
+            actual => panic!("Expected: {:?} | Actual {:?}", lex_4_25::Token::DecimalNumber("1".to_string()), actual)
+        }
+        match &tree.children[0].children[1].node {
+            lex_4_25::Token::DecimalNumber(num) => assert_eq!(num, &"1"),
+            actual => panic!("Expected: {:?} | Actual {:?}", lex_4_25::Token::DecimalNumber("1".to_string()), actual)
+        }
+        assert_eq!(tree.children[0].children[0].children.len(), 0);
+        assert_eq!(tree.children[0].children[1].children.len(), 0);
     }
 
     #[test]

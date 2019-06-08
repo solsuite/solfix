@@ -69,6 +69,7 @@ pub enum Token {
     Equals,
     Ether,
     Event,
+    EventParameter,
     Exclamation,
     External,
     False,
