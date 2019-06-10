@@ -72,7 +72,10 @@ pub fn parse(input: String) -> ParseTree {
                 // current_node.node = lex_4_25::Token::Interface;
                 parse_contract(input_chars, cur);
             }
-            _ => panic!("Invalid top level expression")
+            lex_4_25::Token::EOF => {
+                lex_4_25::next_token(input_chars, cur);
+            }
+            actual => panic!("Invalid top level expression {:?}", actual)
         }
     }
     tree
@@ -150,7 +153,10 @@ fn parse_contract(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
             panic!("Invalid contract definition")
         }
     }
-    result.children.push(Box::new(parse_contract_part(chars, cur)));
+    match lex_4_25::peek_token(chars, cur) {
+        lex_4_25::Token::CloseBrace => result.add_child(lex_4_25::Token::OpenBrace),
+        _ => result.children.push(Box::new(parse_contract_part(chars, cur)))
+    }
     match lex_4_25::next_token(chars, cur) {
         lex_4_25::Token::CloseBrace => (),
         actual => panic!("Invalid contract definition {:?}", actual)
@@ -174,13 +180,52 @@ fn parse_inheritance_specifier(chars: &Vec<char>, cur: &mut usize) -> ParseNode 
 
 fn parse_contract_part(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
     let mut result = lex_4_25::Token::OpenBrace.to_leaf(); 
+    let mut stop = false;
+    while !stop {
+        match lex_4_25::peek_token(chars, cur) {
+            lex_4_25::Token::Enum => result.children.push(Box::new(parse_enum_definition(chars, cur))),
+            lex_4_25::Token::Event => result.children.push(Box::new(parse_event_definition(chars, cur))),
+            lex_4_25::Token::Function => result.children.push(Box::new(parse_function_definition(chars, cur))),
+            lex_4_25::Token::Modifier => result.children.push(Box::new(parse_modifier_definition(chars, cur))),
+            lex_4_25::Token::Using => result.children.push(Box::new(parse_using_for_declaration(chars, cur))),
+            lex_4_25::Token::Struct => result.children.push(Box::new(parse_struct_definition(chars, cur))),
+            lex_4_25::Token::CloseBrace => stop = true,
+            _ => result.children.push(Box::new(parse_state_variable_declaration(chars, cur)))
+        }
+    }
+    result
+}
+
+fn parse_struct_definition(chars: &Vec<char>, cur: &mut usize) -> ParseNode { ParseNode::empty() }
+
+fn parse_state_variable_declaration(chars: &Vec<char>, cur: &mut usize) -> ParseNode {  
+    let mut result = lex_4_25::Token::StateVariable.to_leaf();
+    result.children.push(Box::new(parse_type_name(chars, cur)));
+    let mut stop = false;
+    while !stop {
+        match lex_4_25::peek_token(chars, cur) {
+            lex_4_25::Token::Constant |
+            lex_4_25::Token::Internal |
+            lex_4_25::Token::Private  |
+            lex_4_25::Token::Public   => result.add_child(lex_4_25::next_token(chars, cur)),
+            _ => stop = true
+        }
+    }
+    match lex_4_25::next_token(chars, cur) {
+        id @ lex_4_25::Token::Identifier(..) => result.add_child(id),
+        _ => panic!("Invalid state variable declaration")
+    }
     match lex_4_25::peek_token(chars, cur) {
-        lex_4_25::Token::Enum => result.children.push(Box::new(parse_enum_definition(chars, cur))),
-        lex_4_25::Token::Event => result.children.push(Box::new(parse_event_definition(chars, cur))),
-        lex_4_25::Token::Function => result.children.push(Box::new(parse_function_definition(chars, cur))),
-        lex_4_25::Token::Modifier => result.children.push(Box::new(parse_modifier_definition(chars, cur))),
-        lex_4_25::Token::Using => result.children.push(Box::new(parse_using_for_declaration(chars, cur))),
-        _ => () 
+        lex_4_25::Token::Assignment => {
+            result.add_child(lex_4_25::next_token(chars, cur));
+            let last = result.children.len() - 1;
+            result.children[last].children.push(Box::new(parse_expression(chars, cur)));
+        }
+        _ => ()
+    }
+    match lex_4_25::next_token(chars, cur) {
+        lex_4_25::Token::Semicolon => (),
+        _ => panic!("Invalid state variable declaration")
     }
     result
 }
@@ -423,7 +468,19 @@ fn parse_statement(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
             lex_4_25::Token::Placeholder.to_leaf()
         }
         lex_4_25::Token::Emit => parse_emit_statement(chars, cur),
-        _ => panic!("Invalid statement")
+        // TODO: This actually should be parse_variable_declaration | parse_expression
+        _ => {
+            let result = parse_expression(chars, cur);
+            match result.node {
+                lex_4_25::Token::NoMatch => panic!("Invalid statement"),
+                _ => ()
+            }
+            match lex_4_25::next_token(chars, cur) {
+                lex_4_25::Token::Semicolon => (),
+                _ => panic!("Invalid statement"),
+            }
+            result
+        }
     }
 }
 
@@ -491,7 +548,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: ParseNode) -> Parse
                 lex_4_25::Token::NotEquals           |
                 lex_4_25::Token::LogicalAnd          |
                 lex_4_25::Token::LogicalOr           |
-                lex_4_25::Token::Set                 |
+                lex_4_25::Token::Assignment          |
                 lex_4_25::Token::OrEquals            |
                 lex_4_25::Token::XorEquals           |
                 lex_4_25::Token::AndEquals           |
@@ -544,7 +601,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: ParseNode) -> Parse
                 lex_4_25::Token::NotEquals           |
                 lex_4_25::Token::LogicalAnd          |
                 lex_4_25::Token::LogicalOr           |
-                lex_4_25::Token::Set                 |
+                lex_4_25::Token::Assignment          |
                 lex_4_25::Token::OrEquals            |
                 lex_4_25::Token::XorEquals           |
                 lex_4_25::Token::AndEquals           |
@@ -583,7 +640,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: ParseNode) -> Parse
                 lex_4_25::Token::NotEquals           |
                 lex_4_25::Token::LogicalAnd          |
                 lex_4_25::Token::LogicalOr           |
-                lex_4_25::Token::Set                 |
+                lex_4_25::Token::Assignment          |
                 lex_4_25::Token::OrEquals            |
                 lex_4_25::Token::XorEquals           |
                 lex_4_25::Token::AndEquals           |
@@ -622,7 +679,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: ParseNode) -> Parse
                 lex_4_25::Token::NotEquals           |
                 lex_4_25::Token::LogicalAnd          |
                 lex_4_25::Token::LogicalOr           |
-                lex_4_25::Token::Set                 |
+                lex_4_25::Token::Assignment          |
                 lex_4_25::Token::OrEquals            |
                 lex_4_25::Token::XorEquals           |
                 lex_4_25::Token::AndEquals           |
@@ -656,7 +713,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: ParseNode) -> Parse
                 lex_4_25::Token::NotEquals           |
                 lex_4_25::Token::LogicalAnd          |
                 lex_4_25::Token::LogicalOr           |
-                lex_4_25::Token::Set                 |
+                lex_4_25::Token::Assignment          |
                 lex_4_25::Token::OrEquals            |
                 lex_4_25::Token::XorEquals           |
                 lex_4_25::Token::AndEquals           |
@@ -688,7 +745,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: ParseNode) -> Parse
                 lex_4_25::Token::NotEquals           |
                 lex_4_25::Token::LogicalAnd          |
                 lex_4_25::Token::LogicalOr           |
-                lex_4_25::Token::Set                 |
+                lex_4_25::Token::Assignment          |
                 lex_4_25::Token::OrEquals            |
                 lex_4_25::Token::XorEquals           |
                 lex_4_25::Token::AndEquals           |
@@ -718,7 +775,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: ParseNode) -> Parse
                 lex_4_25::Token::NotEquals           |
                 lex_4_25::Token::LogicalAnd          |
                 lex_4_25::Token::LogicalOr           |
-                lex_4_25::Token::Set                 |
+                lex_4_25::Token::Assignment          |
                 lex_4_25::Token::OrEquals            |
                 lex_4_25::Token::XorEquals           |
                 lex_4_25::Token::AndEquals           |
@@ -747,7 +804,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: ParseNode) -> Parse
                 lex_4_25::Token::NotEquals           |
                 lex_4_25::Token::LogicalAnd          |
                 lex_4_25::Token::LogicalOr           |
-                lex_4_25::Token::Set                 |
+                lex_4_25::Token::Assignment          |
                 lex_4_25::Token::OrEquals            |
                 lex_4_25::Token::XorEquals           |
                 lex_4_25::Token::AndEquals           |
@@ -776,7 +833,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: ParseNode) -> Parse
                 lex_4_25::Token::NotEquals           |
                 lex_4_25::Token::LogicalAnd          |
                 lex_4_25::Token::LogicalOr           |
-                lex_4_25::Token::Set                 |
+                lex_4_25::Token::Assignment          |
                 lex_4_25::Token::OrEquals            |
                 lex_4_25::Token::XorEquals           |
                 lex_4_25::Token::AndEquals           |
@@ -806,7 +863,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: ParseNode) -> Parse
                 lex_4_25::Token::NotEquals           |
                 lex_4_25::Token::LogicalAnd          |
                 lex_4_25::Token::LogicalOr           |
-                lex_4_25::Token::Set                 |
+                lex_4_25::Token::Assignment          |
                 lex_4_25::Token::OrEquals            |
                 lex_4_25::Token::XorEquals           |
                 lex_4_25::Token::AndEquals           |
@@ -829,7 +886,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: ParseNode) -> Parse
                 lex_4_25::Token::NotEquals           |
                 lex_4_25::Token::LogicalAnd          |
                 lex_4_25::Token::LogicalOr           |
-                lex_4_25::Token::Set                 |
+                lex_4_25::Token::Assignment          |
                 lex_4_25::Token::OrEquals            |
                 lex_4_25::Token::XorEquals           |
                 lex_4_25::Token::AndEquals           |
@@ -849,7 +906,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: ParseNode) -> Parse
             let right = parse_expression(&chars, cur);
             match right.node {
                 lex_4_25::Token::LogicalOr           | 
-                lex_4_25::Token::Set                 |
+                lex_4_25::Token::Assignment          |
                 lex_4_25::Token::OrEquals            |
                 lex_4_25::Token::XorEquals           |
                 lex_4_25::Token::AndEquals           |
@@ -870,7 +927,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: ParseNode) -> Parse
             match right.node {
                 lex_4_25::Token::Question            |
                 lex_4_25::Token::Colon               |
-                lex_4_25::Token::Set                 |
+                lex_4_25::Token::Assignment          |
                 lex_4_25::Token::OrEquals            |
                 lex_4_25::Token::XorEquals           |
                 lex_4_25::Token::AndEquals           |
@@ -884,7 +941,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: ParseNode) -> Parse
                 _ => result.children.push(Box::new(right))
             }
         }
-        lex_4_25::Token::Set              |
+        lex_4_25::Token::Assignment       |
         lex_4_25::Token::OrEquals         |
         lex_4_25::Token::XorEquals        |
         lex_4_25::Token::AndEquals        |
@@ -899,7 +956,7 @@ fn parse_operation(chars: &Vec<char>, cur: &mut usize, left: ParseNode) -> Parse
             result.children.push(Box::new(left));
             let right = parse_expression(&chars, cur);
             match right.node {
-                lex_4_25::Token::Set                 |
+                lex_4_25::Token::Assignment          |
                 lex_4_25::Token::OrEquals            |
                 lex_4_25::Token::XorEquals           |
                 lex_4_25::Token::AndEquals           |
@@ -1067,7 +1124,7 @@ pub fn parse_type_name(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
 }
 
 fn parse_user_defined_type_name(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
-    let mut result = lex_4_25::Token::Dot.to_leaf();
+    let mut result = lex_4_25::Token::UserDefinedTypeName.to_leaf();
     let mut stop = false;
     while !stop {
         match lex_4_25::next_token(chars, cur) {

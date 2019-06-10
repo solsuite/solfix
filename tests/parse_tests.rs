@@ -76,7 +76,7 @@ mod parse_tests {
                                     node: lex_4_25::Token::OpenParenthesis,
                                     children: vec![
                                         Box::new(ParseNode {
-                                            node: lex_4_25::Token::Dot,
+                                            node: lex_4_25::Token::UserDefinedTypeName,
                                             children: vec![
                                                 Box::new(lex_4_25::Token::Identifier("A".to_string()).to_leaf())
                                             ]
