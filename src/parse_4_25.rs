@@ -179,6 +179,7 @@ fn parse_contract_part(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
         lex_4_25::Token::Event => result.children.push(Box::new(parse_event_definition(chars, cur))),
         lex_4_25::Token::Function => result.children.push(Box::new(parse_function_definition(chars, cur))),
         lex_4_25::Token::Modifier => result.children.push(Box::new(parse_modifier_definition(chars, cur))),
+        lex_4_25::Token::Using => result.children.push(Box::new(parse_using_for_declaration(chars, cur))),
         _ => () 
     }
     result
@@ -215,6 +216,31 @@ fn parse_enum_definition(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
     match lex_4_25::next_token(chars, cur) {
         lex_4_25::Token::CloseBrace => (),
         _ => panic!("Invalid enum definition")
+    }
+    result
+}
+
+fn parse_using_for_declaration(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
+    let mut result = lex_4_25::Token::Using.to_leaf();
+    match lex_4_25::next_token(chars, cur) {
+        lex_4_25::Token::Using => (),
+        _ => panic!("Invalid using for declaration")
+    }
+    match lex_4_25::next_token(chars, cur) {
+        id @ lex_4_25::Token::Identifier(..) => result.add_child(id),
+        _ => panic!("Invalid using for declaration")
+    }
+    match lex_4_25::next_token(chars, cur) {
+        lex_4_25::Token::For => (),
+        _ => panic!("Invalid using for declaration")
+    }
+    match lex_4_25::peek_token(chars, cur) {
+        lex_4_25::Token::Multiply => result.add_child(lex_4_25::next_token(chars, cur)),
+        _ => result.children.push(Box::new(parse_type_name(chars, cur)))
+    }
+    match lex_4_25::next_token(chars, cur) {
+        lex_4_25::Token::Semicolon => (),
+        _ => panic!("Invalid using for declaration")
     }
     result
 }

@@ -359,5 +359,58 @@ mod parse_tests {
     }
 
     #[test]
-    fn contract_using_for_test1() { }
+    fn contract_using_for_test1() { 
+        let actual_tree = parse(String::from("contract Using { using SafeMath for uint256; }"));
+        let expected_tree = ParseTree {
+            children: vec![
+                ParseNode {
+                    node: lex_4_25::Token::Contract,
+                    children: vec![
+                        Box::new(lex_4_25::Token::Identifier("Using".to_string()).to_leaf()),
+                        Box::new(ParseNode {
+                            node: lex_4_25::Token::OpenBrace,
+                            children: vec![
+                                Box::new(ParseNode {
+                                    node: lex_4_25::Token::Using,
+                                    children: vec![
+                                        Box::new(lex_4_25::Token::Identifier("SafeMath".to_string()).to_leaf()),
+                                        Box::new(lex_4_25::Token::Uint256.to_leaf())
+                                    ]
+                                })
+                            ]
+                        })
+                    ]
+                }
+            ]
+        };
+        assert_eq!(expected_tree, actual_tree);
+    }
+
+    #[test]
+    fn contract_using_for_test2() {
+        let actual_tree = parse(String::from("contract Using { using SafeMath for *; }"));
+        let expected_tree = ParseTree {
+            children: vec![
+                ParseNode {
+                    node: lex_4_25::Token::Contract,
+                    children: vec![
+                        Box::new(lex_4_25::Token::Identifier("Using".to_string()).to_leaf()),
+                        Box::new(ParseNode {
+                            node: lex_4_25::Token::OpenBrace,
+                            children: vec![
+                                Box::new(ParseNode {
+                                    node: lex_4_25::Token::Using,
+                                    children: vec![
+                                        Box::new(lex_4_25::Token::Identifier("SafeMath".to_string()).to_leaf()),
+                                        Box::new(lex_4_25::Token::Multiply.to_leaf())
+                                    ]
+                                })
+                            ]
+                        })
+                    ]
+                }
+            ]
+        };
+        assert_eq!(expected_tree, actual_tree);
+    }
 }
