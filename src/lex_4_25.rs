@@ -466,6 +466,36 @@ impl CharExt for char {
     }
 }
 
+trait AsString {
+    fn as_string(&self) -> String;
+}
+
+impl AsString for Vec<char> {
+    fn as_string(&self) -> String {
+        return self.into_iter().collect();
+    }
+}
+
+pub fn to_chars(string: &str) -> Vec<char> {
+    return string.chars().collect::<Vec<char>>();
+}
+
+pub fn to_identifier(string: &str) -> Token {
+    return Token::Identifier(string.to_string());
+}
+
+pub fn to_string_literal(string: &str) -> Token {
+    return Token::StringLiteral(string.to_string());
+}
+
+pub fn to_decimal_number(string: &str) -> Token {
+    return Token::DecimalNumber(string.to_string());
+}
+
+pub fn to_hex_number(string: &str) -> Token {
+    return Token::HexNumber(string.to_string());
+}
+
 /**
  * Given a collected string, returns the matching Token
  * Returns Token::NoMatch if no match is found
@@ -907,7 +937,6 @@ fn match_string(line: &Vec<char>, cur: &mut usize) -> Token {
             return Token::NoMatch; // TODO handle escapes
         } else if line[*cur].to_string() == first_quote {
             collected.push(line[*cur]);
-            *cur += 1;
             return Token::StringLiteral(collected);
         } else {
             collected.push(line[*cur]);
@@ -935,6 +964,7 @@ fn match_identifier_or_keyword(line: &Vec<char>, cur: &mut usize) -> Token {
         collected.push(line[*cur]);
         *cur += 1;
     }
+    *cur -= 1;
     return match_collected(collected);
 }
 
@@ -956,9 +986,10 @@ fn match_hex_number(line: &Vec<char>, cur: &mut usize) -> Token {
         collected.push(line[*cur]);
         *cur += 1;
     }
+    *cur -= 1;
 
     // Cannot only have '0x', and cannot have an odd length
-    if collected.len() <= 2 || collected.len() % 2 != 0 {
+    if collected.len() <= 2 {
         return Token::Illegal;
     } else {
         return Token::HexNumber(collected);
@@ -1017,6 +1048,7 @@ fn match_rational(line: &Vec<char>, cur: &mut usize) -> Token {
         collected.push(line[*cur]);
         *cur += 1;
     }
+    *cur -= 1;
     Token::DecimalNumber(collected)
 }
 
@@ -1095,38 +1127,8 @@ pub fn peek_token(line: &Vec<char>, cur: &mut usize) -> Token {
 mod tests {
     use super::*;
 
-    trait AsString {
-        fn as_string(&self) -> String;
-    }
-
-    impl AsString for Vec<char> {
-        fn as_string(&self) -> String {
-            return self.into_iter().collect();
-        }
-    }
-
     fn fail_test(expect: Token, actual: Token) {
         panic!("Expected: {:?} | Actual: {:?}", expect, actual);
-    }
-
-    fn to_chars(string: &str) -> Vec<char> {
-        return string.chars().collect::<Vec<char>>();
-    }
-
-    fn to_identifier(string: &str) -> Token {
-        return Token::Identifier(to_chars(string).as_string());
-    }
-
-    fn to_string_literal(string: &str) -> Token {
-        return Token::StringLiteral(to_chars(string).as_string());
-    }
-
-    fn to_decimal_number(string: &str) -> Token {
-        return Token::DecimalNumber(to_chars(string).as_string());
-    }
-
-    fn to_hex_number(string: &str) -> Token {
-        return Token::HexNumber(to_chars(string).as_string());
     }
 
     fn expect_next_token(s: &Vec<char>, cur: &mut usize, t: Token) {
@@ -1544,7 +1546,7 @@ mod tests {
         let cur = &mut 0;
         expect_next_token(&s, cur, to_hex_number("0xFF"));
         expect_next_token(&s, cur, to_decimal_number("0"));
-        expect_next_token(&s, cur, Token::Illegal);
+        expect_next_token(&s, cur, to_hex_number("0xF"));
     }
 
     #[test]
