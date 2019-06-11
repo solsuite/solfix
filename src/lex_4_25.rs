@@ -150,6 +150,7 @@ pub enum Token {
     OpenBracket,
     OpenParenthesis,
     OrEquals,
+    Parameter,
     Payable,
     Placeholder,
     Plus,

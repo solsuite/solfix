@@ -425,6 +425,8 @@ fn parse_parameter_list(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
     result
 }
 
+fn parse_parameter(chars: &Vec<char>, cur: &mut usize) -> ParseNode { ParseNode::empty() }
+
 fn parse_block(chars: &Vec<char>, cur: &mut usize) -> ParseNode { 
     let mut result = lex_4_25::Token::OpenBrace.to_leaf();
     match lex_4_25::next_token(chars, cur) {
@@ -1262,4 +1264,3 @@ fn parse_function_type_parameter(chars: &Vec<char>, cur: &mut usize) -> ParseNod
     }
     result
 }
-
