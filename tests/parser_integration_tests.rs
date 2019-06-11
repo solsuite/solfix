@@ -80,6 +80,7 @@ mod parser_integration_tests {
         assert_eq!(expected_tree, actual_tree);
     }
 
+    /*
     #[test]
     fn safe_math_test() {
         let input = fs::read_to_string("./contracts/SafeMath.sol")
@@ -192,4 +193,5 @@ mod parser_integration_tests {
         };
         assert_eq!(expected_tree, actual_tree);
     }
+    */
 } 
