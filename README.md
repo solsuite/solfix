@@ -1,4 +1,7 @@
-[![Build Status](https://travis-ci.com/jalextowle/solidity-fix.svg?branch=master)](https://travis-ci.com/jalextowle/solidity-fix)
+[![Build Status](https://travis-ci.com/jalextowle/solfix.svg?branch=master)](https://travis-ci.com/jalextowle/solfix)
 
-# solidity-fix
-Transpiler from Solidity 4.25 to Solidity 5.0
+# solfix
+A transpiler from Solidity 4.25 to Solidity 5.0
+
+# Testing
+`cargo test`
