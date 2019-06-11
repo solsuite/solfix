@@ -63,7 +63,7 @@ mod lexer_tests {
         expect_next_token(&s, cur, lex_4_25::Token::Semicolon);
         expect_next_token(&s, cur, lex_4_25::Token::Var);
         expect_next_token(&s, cur, lex_4_25::to_identifier("x"));
-        expect_next_token(&s, cur, lex_4_25::Token::Set);
+        expect_next_token(&s, cur, lex_4_25::Token::Assignment);
         expect_next_token(&s, cur, lex_4_25::to_hex_literal("hex\"DEADBEEF\""));
     }
 }

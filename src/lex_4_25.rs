@@ -389,6 +389,7 @@ trait LineMatch {
     fn is_rational_at(&self, idx: usize) -> bool;
     fn is_hex_digit_at(&self, idx: usize) -> bool;
     fn is_hex_delim_at(&self, idx: usize) -> bool;
+    fn is_whitespace_at(&self, idx: usize) -> bool;
 }
 
 impl LineMatch for Vec<char> {
@@ -423,6 +424,13 @@ impl LineMatch for Vec<char> {
     fn is_hex_delim_at(&self, idx: usize) -> bool {
         match self.get(idx) {
             Some(v) => *v == 'x' || *v == 'X',
+            None => false
+        }
+    }
+
+    fn is_whitespace_at(&self, idx: usize) -> bool {
+        match self.get(idx) {
+            Some(v) => v.is_whitespace(),
             None => false
         }
     }
@@ -462,7 +470,7 @@ impl CharExt for char {
 
     // If self is whitespace, returns true
     fn is_whitespace(&self) -> bool {
-        return *self == ' ';
+        return *self == ' ' || *self == '\n' || *self == '\t' || *self == '\r';
     }
 }
 
@@ -684,7 +692,7 @@ fn match_collected(collected: String) -> Token {
 
 // TODO
 fn match_period(line: &Vec<char>, cur: &mut usize) -> Token {
-    Token::NoMatch
+    Token::Dot
 }
 
 /**
@@ -703,7 +711,7 @@ fn match_colon(line: &Vec<char>, cur: &mut usize) -> Token {
 
 /**
  * Matches = at line[*cur] with its corresponding Token
- * =  | Set
+ * =  | Assignment
  * == | Equals
  * => | Arrow
  */
@@ -715,7 +723,7 @@ fn match_equals(line: &Vec<char>, cur: &mut usize) -> Token {
         *cur += 1;
         return Token::Arrow;
     } else {
-        return Token::Set;
+        return Token::Assignment;
     }
 }
 
@@ -815,10 +823,10 @@ fn match_rarrow(line: &Vec<char>, cur: &mut usize) -> Token {
         } else if line.match_idx(*cur + 2, '>') {
             if line.match_idx(*cur + 3, '=') {
                 *cur += 3;
-                return Token::NoMatch; // TODO
+                return Token::Illegal; // TODO
             } else {
                 *cur += 2;
-                return Token::NoMatch; // TODO
+                return Token::Illegal; // TODO
             }
         } else {
             *cur += 1;
@@ -940,7 +948,7 @@ fn match_string(line: &Vec<char>, cur: &mut usize) -> Token {
     *cur += 1;
     while *cur < line.len() {
         if line[*cur].to_string() == r"\".to_string() {
-            return Token::NoMatch; // TODO handle escapes
+            return Token::Illegal; // TODO handle escapes
         } else if line[*cur].to_string() == first_quote {
             collected.push(line[*cur]);
             return Token::StringLiteral(collected);
@@ -949,7 +957,7 @@ fn match_string(line: &Vec<char>, cur: &mut usize) -> Token {
             *cur += 1;
         }
     }
-    Token::NoMatch
+    Token::EOF
 }
 
 /**
@@ -957,7 +965,7 @@ fn match_string(line: &Vec<char>, cur: &mut usize) -> Token {
  * Returns Token::NoMatch, which is used in the match statement
  */
 fn skip_whitespace(line: &Vec<char>, cur: &mut usize) -> Token {
-    while *cur < line.len() && line.match_idx(*cur + 1, ' ') {
+    while *cur < line.len() && line.is_whitespace_at(*cur + 1) {
         *cur += 1;
     }
     Token::NoMatch
@@ -980,7 +988,7 @@ fn match_hex_literal(line: &Vec<char>, cur: &mut usize, collected: String) -> To
             return Token::Illegal;
         }
     }
-    Token::NoMatch
+    Token::EOF
 }
 
 /**
@@ -1040,21 +1048,29 @@ fn match_hex_number(line: &Vec<char>, cur: &mut usize) -> Token {
 fn match_rational(line: &Vec<char>, cur: &mut usize) -> Token {
     let mut collected = String::new();
     let mut decimal_found = false;
+    let mut version_found = false;
     let mut exponent_found = false;
 
     while *cur < line.len() {
         if line.match_idx(*cur, '.') {
-            // Cannot have 2 decimals, or a decimal after an exponent
+            // Cannot have a decimal after an exponent
+            // If we find 2 decimals, we are parsing a Version
             // Allowed: { var a = 14.4; } || { var a = 1.4e5; }
-            // Not allowed: { var a = 1.4.4; } || { var a = 1e4.5; }
-            if decimal_found || exponent_found {
+            // Not allowed: { var a = 1e4.5; }
+            if decimal_found {
+                if version_found {
+                    return Token::Illegal;
+                } else {
+                    version_found = true;
+                }
+            } else if exponent_found {
                 return Token::Illegal;
             } else {
                 decimal_found = true;
             }
         } else if line.match_idx(*cur, 'e') || line.match_idx(*cur, 'E') {
-            // Cannot have 2 exponents
-            if exponent_found {
+            // Cannot have 2 exponents, or an exponent in a version
+            if exponent_found || version_found {
                 return Token::Illegal;
             } else {
                 // If we find an exponent, there must be at least 1 more digit
@@ -1069,6 +1085,9 @@ fn match_rational(line: &Vec<char>, cur: &mut usize) -> Token {
             }
         } else if !line.is_digit_at(*cur) {
             *cur -= 1;
+            if version_found {
+                return Token::Version(collected);
+            }
             return Token::DecimalNumber(collected);
         }
         collected.push(line[*cur]);
@@ -1084,9 +1103,12 @@ fn match_rational(line: &Vec<char>, cur: &mut usize) -> Token {
  */
 pub fn next_token(line: &Vec<char>, cur: &mut usize) -> Token {
     let mut next = Token::NoMatch;
-    // let mut output = String::with_capacity(line.len());
-    // https://lise-henry.github.io/articles/optimising_strings.html
+    
     loop {
+        if *cur >= line.len() {
+            return Token::EOF;
+        }
+
         let t = match line[*cur] {
             ';' => Token::Semicolon,
             '{' => Token::OpenBrace,
@@ -1113,29 +1135,32 @@ pub fn next_token(line: &Vec<char>, cur: &mut usize) -> Token {
             '|' => match_or(line, cur),             // | || |=
             '^' => match_xor(line, cur),            // ^ ^=
             '"' | '\'' => match_string(line, cur),
-            ' ' => skip_whitespace(line, cur),
             '0' => {
                 if line.match_idx(*cur + 1, ' ') {
                     to_decimal_number("0")
                 } else if line.is_hex_delim_at(*cur + 1) {
                     match_hex_number(line, cur)
+                } else if line.match_idx(*cur + 1, '.') {
+                    match_rational(line, cur)
                 } else {
                     Token::Illegal
                 }
             },
-            n if n.starts_rational() => match_rational(line, cur),
-            c if c.starts_iden_or_keyword() => match_identifier_or_keyword(line, cur),
+            non if non.is_whitespace() => skip_whitespace(line, cur),
+            num if num.starts_rational() => match_rational(line, cur),
+            chr if chr.starts_iden_or_keyword() => match_identifier_or_keyword(line, cur),
             _ => Token::Illegal
         };
 
         if t == Token::Illegal {
             return t;
-        }
-
-        *cur += 1;
-        if t != Token::NoMatch || *cur == line.len() {
-            next = t;
-            break;
+        } else {
+            *cur += 1;
+            if t != Token::NoMatch {
+                return t;
+            } else if *cur >= line.len() {
+                return Token::EOF;
+            }
         }
     }
     next
@@ -1167,6 +1192,14 @@ mod tests {
     /* Colon */
 
     #[test]
+    fn test_pragma1() {
+        let s = to_chars("^0.4.25;");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::BitwiseXor);
+        expect_next_token(&s, cur, Token::Version(String::from("0.4.25")));
+    }
+
+    #[test]
     fn test_colon() {
         let s = to_chars(":");
         let cur = &mut 0;
@@ -1183,10 +1216,10 @@ mod tests {
     /* Equals  */
 
     #[test]
-    fn test_set() {
+    fn test_assignment() {
         let s = to_chars("=");
         let cur = &mut 0;
-        expect_next_token(&s, cur, Token::Set);
+        expect_next_token(&s, cur, Token::Assignment);
     }
 
     #[test]
@@ -1336,14 +1369,14 @@ mod tests {
     fn test_thing_0() { // TODO
         let s = to_chars(">>>");
         let cur = &mut 0;
-        expect_next_token(&s, cur, Token::NoMatch);
+        expect_next_token(&s, cur, Token::Illegal);
     }
 
     #[test]
     fn test_thing_1() { // TODO
         let s = to_chars(">>>=");
         let cur = &mut 0;
-        expect_next_token(&s, cur, Token::NoMatch);
+        expect_next_token(&s, cur, Token::Illegal);
     }
 
     /* LArrow */
@@ -1537,7 +1570,7 @@ mod tests {
         let s = to_chars("0 0.1");
         let cur = &mut 0;
         expect_next_token(&s, cur, to_decimal_number("0"));
-        expect_next_token(&s, cur, Token::Illegal);
+        expect_next_token(&s, cur, to_decimal_number("0.1"));
     }
 
     #[test]
