@@ -281,7 +281,7 @@ mod parse_expression_tests {
         let cur = &mut 0;
         let result = parse_expression(&chars, cur);
         match result.node {
-            lex_4_25::Token::Function => (),
+            lex_4_25::Token::OpenParenthesis => (),
             actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::Function, actual)
         }
         assert_eq!(result.children.len(), 2);
@@ -304,7 +304,7 @@ mod parse_expression_tests {
         let cur = &mut 0;
         let result = parse_expression(&chars, cur);
         match result.node {
-            lex_4_25::Token::Function => (),
+            lex_4_25::Token::OpenParenthesis => (),
             actual => panic!("Expected: {:?} | Actual: {:?}", lex_4_25::Token::Function, actual)
         }
         println!("{:?}", result);

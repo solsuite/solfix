@@ -1,6 +1,6 @@
 use regex::Regex;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Token {
     Address,
     AndEquals,
@@ -8,6 +8,7 @@ pub enum Token {
     Arrow,
     As,
     Assembly,
+    Assignment,
     BitwiseAnd,
     BitwiseOr,
     BitwiseXor,
@@ -66,9 +67,11 @@ pub enum Token {
     Else,
     Emit,
     Enum,
+    EOF,
     Equals,
     Ether,
     Event,
+    EventParameter,
     Exclamation,
     External,
     False,
@@ -147,6 +150,7 @@ pub enum Token {
     OpenBracket,
     OpenParenthesis,
     OrEquals,
+    Parameter,
     Payable,
     Placeholder,
     Plus,
@@ -161,11 +165,11 @@ pub enum Token {
     Returns,
     Seconds,
     Semicolon,
-    Set,
     ShiftLeft,
     ShiftLeftEquals,
     ShiftRight,
     ShiftRightEquals,
+    StateVariable,
     Storage,
     String,
     StringLiteral(String),
@@ -208,6 +212,7 @@ pub enum Token {
     Uint240,
     Uint248,
     Uint256,
+    UserDefinedTypeName,
     Using,
     Var,
     Version(String),
@@ -727,7 +732,7 @@ pub fn next_token(line: &Vec<char>, cur: &mut usize) -> Token {
             } else if collected == "<" {
                 return Token::LessThan;
             } else if collected == "=" {
-                return Token::Set;
+                return Token::Assignment;
             } else if collected == "!" {
                 return Token::Exclamation;
             } else if collected == ">" {
@@ -742,8 +747,10 @@ pub fn next_token(line: &Vec<char>, cur: &mut usize) -> Token {
         }
         *cur += 1;
     }
-    // If the end of the line is reached, match the collected characters and return the result
-    match_collected(collected)
+    return match match_collected(collected) {
+        Token::NoMatch => Token::EOF,
+        other => other
+    }
 }
 
 // Return the next token in the line, without incrementing cur
