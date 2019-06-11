@@ -455,6 +455,7 @@ impl CharExt for char {
         return *self == '_' || *self == '$' || self.is_ascii_alphabetic();
     }
 
+    // If self could be a component of an identifier or keyword, returns true
     fn is_iden_or_keyword_part(&self) -> bool {
         return self.starts_iden_or_keyword() || self.is_digit(10);
     }
@@ -690,7 +691,9 @@ fn match_collected(collected: String) -> Token {
     }
 }
 
-// TODO
+/**
+ * Matches . at line[*cur] with Token::Dot
+ */
 fn match_period(line: &Vec<char>, cur: &mut usize) -> Token {
     Token::Dot
 }
