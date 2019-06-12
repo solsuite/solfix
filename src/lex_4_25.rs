@@ -695,7 +695,11 @@ fn match_collected(collected: String) -> Token {
  * Matches . at line[*cur] with Token::Dot
  */
 fn match_period(line: &Vec<char>, cur: &mut usize) -> Token {
-    Token::Dot
+    if line.is_digit_at(*cur + 1) {
+        return match_rational(line, cur);
+    } else {
+        return Token::Dot;
+    }
 }
 
 /**
@@ -1200,6 +1204,7 @@ mod tests {
         let cur = &mut 0;
         expect_next_token(&s, cur, Token::BitwiseXor);
         expect_next_token(&s, cur, Token::Version(String::from("0.4.25")));
+        expect_next_token(&s, cur, Token::Semicolon);
     }
 
     #[test]
@@ -1589,6 +1594,18 @@ mod tests {
         let cur = &mut 0;
         expect_next_token(&s, cur, to_decimal_number("1.2e3"));
         expect_next_token(&s, cur, to_decimal_number("4E5"));
+    }
+
+    #[test]
+    fn test_numbers_4() {
+        let s = to_chars(".14 .Iden Iden.Iden");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, to_decimal_number(".14"));
+        expect_next_token(&s, cur, Token::Dot);
+        expect_next_token(&s, cur, to_identifier("Iden"));
+        expect_next_token(&s, cur, to_identifier("Iden"));
+        expect_next_token(&s, cur, Token::Dot);
+        expect_next_token(&s, cur, to_identifier("Iden"));
     }
 
     #[test]
