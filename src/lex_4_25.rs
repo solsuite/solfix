@@ -9,6 +9,7 @@ pub enum Token {
     As,
     Assembly,
     Assignment,
+    ASMAssign,
     BitwiseAnd,
     BitwiseOr,
     BitwiseXor,
@@ -53,6 +54,8 @@ pub enum Token {
     CloseParenthesis,
     Colon,
     Comma,
+    CommentMulti,
+    CommentSingle,
     Constant,
     Continue,
     Contract,
@@ -88,6 +91,7 @@ pub enum Token {
     Hours,
     Identifier(String),
     If,
+    Illegal,
     Import,
     Increment,
     Indexed,
@@ -379,38 +383,130 @@ impl Token {
     }
 }
 
-trait StopToken {
-    fn is_stop_token(self) -> bool;
+trait LineMatch {
+    fn match_idx(&self, idx: usize, val: char) -> bool;
+    fn is_digit_at(&self, idx: usize) -> bool;
+    fn is_rational_at(&self, idx: usize) -> bool;
+    fn is_hex_digit_at(&self, idx: usize) -> bool;
+    fn is_hex_delim_at(&self, idx: usize) -> bool;
+    fn is_whitespace_at(&self, idx: usize) -> bool;
 }
 
-impl StopToken for char {
-    // If true, the lexer will stop reading at this Token
-    fn is_stop_token(self) -> bool {
-        if self.is_whitespace() ||
-           self == ';' ||
-           self == '{' ||
-           self == '}' ||
-           self == '(' ||
-           self == ')' ||
-           self == '[' ||
-           self == ']' ||
-           self == ',' ||
-           self == ':' ||
-           self == '!' ||
-           self == '~' ||
-           self == '*' ||
-           self == '/' ||
-           self == '+' ||
-           self == '-' ||
-           self == '=' ||
-           self == '>' ||
-           self == '<' ||
-           self == '!' ||
-           self == '.' {
-            return true;
-       }
-       return false; 
+impl LineMatch for Vec<char> {
+    fn match_idx(&self, idx: usize, val: char) -> bool {
+        match self.get(idx) {
+            Some(v) => v == &val,
+            None => false
+        }
     }
+
+    fn is_digit_at(&self, idx: usize) -> bool {
+        match self.get(idx) {
+            Some(v) => v.is_digit(10),
+            None => false
+        }
+    }
+
+    fn is_hex_digit_at(&self, idx: usize) -> bool {
+        match self.get(idx) {
+            Some(v) => v.is_digit(16),
+            None => false
+        }
+    }
+
+    fn is_rational_at(&self, idx: usize) -> bool {
+        match self.get(idx) {
+            Some(v) => v.is_rational(),
+            None => false
+        }
+    }
+
+    fn is_hex_delim_at(&self, idx: usize) -> bool {
+        match self.get(idx) {
+            Some(v) => *v == 'x' || *v == 'X',
+            None => false
+        }
+    }
+
+    fn is_whitespace_at(&self, idx: usize) -> bool {
+        match self.get(idx) {
+            Some(v) => v.is_whitespace(),
+            None => false
+        }
+    }
+}
+
+trait CharExt {
+    fn starts_rational(&self) -> bool;
+    fn starts_iden_or_keyword(&self) -> bool;
+    fn is_iden_or_keyword_part(&self) -> bool;
+    fn is_whitespace(&self) -> bool;
+    fn is_rational(&self) -> bool;
+}
+
+impl CharExt for char {
+    // Not allowed: Leading 0, leading 'e'
+    fn starts_rational(&self) -> bool {
+        return (self.is_digit(10) || *self == '.') && *self != '0';
+    }
+
+    // If self could be the first character of an identifier, returns true
+    fn starts_iden_or_keyword(&self) -> bool {
+        return *self == '_' || *self == '$' || self.is_ascii_alphabetic();
+    }
+
+    // If self could be a component of an identifier or keyword, returns true
+    fn is_iden_or_keyword_part(&self) -> bool {
+        return self.starts_iden_or_keyword() || self.is_digit(10);
+    }
+
+    // Returns true if the char could be a part of a rational literal
+    fn is_rational(&self) -> bool {
+        return 
+            *self == 'e' || 
+            *self == 'E' || 
+            *self == '.' || 
+            self.is_digit(10);
+    }
+
+    // If self is whitespace, returns true
+    fn is_whitespace(&self) -> bool {
+        return *self == ' ' || *self == '\n' || *self == '\t' || *self == '\r';
+    }
+}
+
+trait AsString {
+    fn as_string(&self) -> String;
+}
+
+impl AsString for Vec<char> {
+    fn as_string(&self) -> String {
+        return self.into_iter().collect();
+    }
+}
+
+pub fn to_chars(string: &str) -> Vec<char> {
+    return string.chars().collect::<Vec<char>>();
+}
+
+pub fn to_identifier(string: &str) -> Token {
+    return Token::Identifier(string.to_string());
+}
+
+pub fn to_string_literal(string: &str) -> Token {
+    return Token::StringLiteral(string.to_string());
+}
+
+pub fn to_decimal_number(string: &str) -> Token {
+    return Token::DecimalNumber(string.to_string());
+}
+
+pub fn to_hex_number(string: &str) -> Token {
+    return Token::HexNumber(string.to_string());
+}
+
+pub fn to_hex_literal(string: &str) -> Token {
+    return Token::HexLiteral(string.to_string());
 }
 
 /**
@@ -596,161 +692,485 @@ fn match_collected(collected: String) -> Token {
 }
 
 /**
+ * Matches . at line[*cur] with Token::Dot
+ */
+fn match_period(line: &Vec<char>, cur: &mut usize) -> Token {
+    if line.is_digit_at(*cur + 1) {
+        return match_rational(line, cur);
+    } else {
+        return Token::Dot;
+    }
+}
+
+/**
+ * Matches : at line[*cur] with its corresponding Token
+ * :  | Colon
+ * := | ASMAssign
+ */
+fn match_colon(line: &Vec<char>, cur: &mut usize) -> Token {
+    if line.match_idx(*cur + 1, '=') {
+        *cur += 1;
+        return Token::ASMAssign;
+    } else {
+        return Token::Colon;
+    }
+}
+
+/**
+ * Matches = at line[*cur] with its corresponding Token
+ * =  | Assignment
+ * == | Equals
+ * => | Arrow
+ */
+fn match_equals(line: &Vec<char>, cur: &mut usize) -> Token {
+    if line.match_idx(*cur + 1, '=') {
+        *cur += 1;
+        return Token::Equals;
+    } else if line.match_idx(*cur + 1, '>') {
+        *cur += 1;
+        return Token::Arrow;
+    } else {
+        return Token::Assignment;
+    }
+}
+
+/**
+ * Matches + at line[*cur] with its corresponding Token
+ * +  | Plus
+ * ++ | Increment
+ * += | PlusEquals
+ */
+fn match_plus(line: &Vec<char>, cur: &mut usize) -> Token {
+    if line.match_idx(*cur + 1, '+') {
+        *cur += 1;
+        return Token::Increment;
+    } else if line.match_idx(*cur + 1, '=') {
+        *cur += 1;
+        return Token::PlusEquals;
+    } else {
+        return Token::Plus;
+    }
+}
+
+/**
+ * Matches - at line[*cur] with its corresponding Token
+ * -  | Minus
+ * -- | Decrement
+ * -= | MinusEquals
+ */
+fn match_minus(line: &Vec<char>, cur: &mut usize) -> Token {
+    if line.match_idx(*cur + 1, '-') {
+        *cur += 1;
+        return Token::Decrement;
+    } else if line.match_idx(*cur + 1, '=') {
+        *cur += 1;
+        return Token::MinusEquals;
+    } else {
+        return Token::Minus;
+    }
+}
+
+/**
+ * Matches * at line[*cur] with its corresponding Token
+ * *  | Multiply
+ * ** | Power
+ * *= | MultiplyEquals
+ */
+fn match_star(line: &Vec<char>, cur: &mut usize) -> Token {
+    if line.match_idx(*cur + 1, '*') {
+        *cur += 1;
+        return Token::Power;
+    } else if line.match_idx(*cur + 1, '=') {
+        *cur += 1;
+        return Token::MultiplyEquals;
+    } else {
+        return Token::Multiply;
+    }
+}
+
+/**
+ * Matches / at line[*cur] with its corresponding Token
+ * /  | Divide
+ * // | CommentSingle
+ * /* | CommentMulti */
+ * /= | DivideEquals
+ */
+fn match_slash(line: &Vec<char>, cur: &mut usize) -> Token {
+    if line.match_idx(*cur + 1, '=') {
+        *cur += 1;
+        return Token::DivideEquals;
+    } else if line.match_idx(*cur + 1, '/') {
+        *cur += 1;
+        return Token::CommentSingle;
+    } else if line.match_idx(*cur + 1, '*') {
+        *cur += 1;
+        return Token::CommentMulti;
+    } else {
+        return Token::Divide;
+    }
+}
+
+/**
+ * Matches > at line[*cur] with its corresponding Token
+ * >    | GreaterThen
+ * >=   | GreaterThanOrEquals
+ * >>   | ShiftRight
+ * >>=  | ShiftRightEquals
+ * >>>  | TODO
+ * >>>= | TODO
+ */
+fn match_rarrow(line: &Vec<char>, cur: &mut usize) -> Token {
+    if line.match_idx(*cur + 1, '=') {
+        *cur += 1;
+        return Token::GreaterThanOrEquals;
+    } else if line.match_idx(*cur + 1, '>') {
+        if line.match_idx(*cur + 2, '=') {
+            *cur += 2;
+            return Token::ShiftRightEquals;
+        } else if line.match_idx(*cur + 2, '>') {
+            if line.match_idx(*cur + 3, '=') {
+                *cur += 3;
+                return Token::Illegal; // TODO
+            } else {
+                *cur += 2;
+                return Token::Illegal; // TODO
+            }
+        } else {
+            *cur += 1;
+            return Token::ShiftRight;
+        }
+    } else {
+        return Token::GreaterThan;
+    }
+}
+
+/**
+ * Matches < at line[*cur] with its corresponding Token
+ * <    | LessThen
+ * <=   | LessThanOrEquals
+ * <<   | ShiftLeft
+ * <<=  | ShiftLeftEquals
+ */
+fn match_larrow(line: &Vec<char>, cur: &mut usize) -> Token {
+    if line.match_idx(*cur + 1, '=') {
+        *cur += 1;
+        return Token::LessThanOrEquals;
+    } else if line.match_idx(*cur + 1, '<') {
+        if line.match_idx(*cur + 2, '=') {
+            *cur += 2;
+            return Token::ShiftLeftEquals;
+        } else {
+            *cur += 1;
+            return Token::ShiftLeft;
+        }
+    } else {
+        return Token::LessThan;
+    }
+}
+
+/**
+ * Matches ! at line[*cur] with its corresponding Token
+ * !  | Exclamation
+ * != | NotEquals
+ */
+fn match_exclamation(line: &Vec<char>, cur: &mut usize) -> Token {
+    if line.match_idx(*cur + 1, '=') {
+        *cur += 1;
+        return Token::NotEquals;
+    } else {
+        return Token::Exclamation;
+    }
+}
+
+/**
+ * Matches % at line[*cur] with its corresponding Token
+ * %  | Modulus
+ * %= | ModEquals
+ */
+fn match_percent(line: &Vec<char>, cur: &mut usize) -> Token {
+    if line.match_idx(*cur + 1, '=') {
+        *cur += 1;
+        return Token::ModEquals;
+    } else {
+        return Token::Modulus;
+    }
+}
+
+/**
+ * Matches & at line[*cur] with its corresponding Token
+ * &  | BitwiseAnd
+ * && | LogicalAnd
+ * &= | AndEquals
+ */
+fn match_and(line: &Vec<char>, cur: &mut usize) -> Token {
+    if line.match_idx(*cur + 1, '&') {
+        *cur += 1;
+        return Token::LogicalAnd;
+    } else if line.match_idx(*cur + 1, '=') {
+        *cur += 1;
+        return Token::AndEquals;
+    } else {
+        return Token::BitwiseAnd;
+    }
+}
+
+/**
+ * Matches | at line[*cur] with its corresponding Token
+ * |  | BitwiseOr
+ * || | LogicalOr
+ * |= | OrEquals
+ */
+fn match_or(line: &Vec<char>, cur: &mut usize) -> Token {
+    if line.match_idx(*cur + 1, '|') {
+        *cur += 1;
+        return Token::LogicalOr;
+    } else if line.match_idx(*cur + 1, '=') {
+        *cur += 1;
+        return Token::OrEquals;
+    } else {
+        return Token::BitwiseOr;
+    }
+}
+
+/**
+ * Matches | at line[*cur] with its corresponding Token
+ * ^  | BitwiseXor
+ * ^= | XorEquals
+ */
+fn match_xor(line: &Vec<char>, cur: &mut usize) -> Token {
+    if line.match_idx(*cur + 1, '=') {
+        *cur += 1;
+        return Token::XorEquals;
+    } else {
+        return Token::BitwiseXor;
+    }
+}
+
+/**
+ * Matches a string literal at line[*cur] with its corresponding Token
+ */
+fn match_string(line: &Vec<char>, cur: &mut usize) -> Token {
+    let first_quote = line[*cur].to_string();
+    let mut collected = String::from(first_quote.clone());
+    *cur += 1;
+    while *cur < line.len() {
+        if line[*cur].to_string() == r"\".to_string() {
+            return Token::Illegal; // TODO handle escapes
+        } else if line[*cur].to_string() == first_quote {
+            collected.push(line[*cur]);
+            return Token::StringLiteral(collected);
+        } else {
+            collected.push(line[*cur]);
+            *cur += 1;
+        }
+    }
+    Token::EOF
+}
+
+/**
+ * Increments cur until end of line or until a non-whitespace character
+ * Returns Token::NoMatch, which is used in the match statement
+ */
+fn skip_whitespace(line: &Vec<char>, cur: &mut usize) -> Token {
+    while *cur < line.len() && line.is_whitespace_at(*cur + 1) {
+        *cur += 1;
+    }
+    Token::NoMatch
+}
+
+fn match_hex_literal(line: &Vec<char>, cur: &mut usize, collected: String) -> Token {
+    let first_quote = line[*cur].to_string();
+    let mut literal = collected.clone();
+    literal.push(line[*cur]);
+    *cur += 1;
+    while *cur < line.len() {
+        if line[*cur].to_string() == first_quote {
+            literal.push(line[*cur]);
+            *cur -= 1;
+            return Token::HexLiteral(literal);
+        } else if line.is_hex_digit_at(*cur) {
+            literal.push(line[*cur]);
+            *cur += 1;
+        } else {
+            return Token::Illegal;
+        }
+    }
+    Token::EOF
+}
+
+/**
+ * Matches an identifier or keyword at line[*cur]
+ */
+fn match_identifier_or_keyword(line: &Vec<char>, cur: &mut usize) -> Token {
+    let mut collected = String::new();
+    while *cur < line.len() && line[*cur].is_iden_or_keyword_part() {
+        collected.push(line[*cur]);
+        *cur += 1;
+    }
+    *cur -= 1;
+    let mut result = match_collected(collected);
+    // Special case - found "hex"
+    if result == Token::Hex {
+        if line.match_idx(*cur + 1, '"') || line.match_idx(*cur + 1, '\'') {
+            *cur += 1;
+            return match_hex_literal(line, cur, "hex".to_string());
+        } else {
+            return Token::Illegal;
+        }
+    }
+    return result;
+}
+
+/**
+ * Matches a leading '0'. If this does not correspond to a hex
+ * number, returns Token::Illegal
+ */
+fn match_hex_number(line: &Vec<char>, cur: &mut usize) -> Token {
+    let mut collected = String::new();
+    if !line.is_hex_delim_at(*cur + 1) {
+        return Token::Illegal;
+    }
+
+    collected.push(line[*cur]);
+    collected.push(line[*cur + 1]);
+    *cur += 2;
+
+    while *cur < line.len() && line.is_hex_digit_at(*cur) {
+        collected.push(line[*cur]);
+        *cur += 1;
+    }
+    *cur -= 1;
+
+    // Cannot only have '0x'
+    if collected.len() <= 2 {
+        return Token::Illegal;
+    } else {
+        return Token::HexNumber(collected);
+    }
+}
+
+/**
+ * Matches a decimal literal at line[*cur] and returns its Token
+ */
+fn match_rational(line: &Vec<char>, cur: &mut usize) -> Token {
+    let mut collected = String::new();
+    let mut decimal_found = false;
+    let mut version_found = false;
+    let mut exponent_found = false;
+
+    while *cur < line.len() {
+        if line.match_idx(*cur, '.') {
+            // Cannot have a decimal after an exponent
+            // If we find 2 decimals, we are parsing a Version
+            // Allowed: { var a = 14.4; } || { var a = 1.4e5; }
+            // Not allowed: { var a = 1e4.5; }
+            if decimal_found {
+                if version_found {
+                    return Token::Illegal;
+                } else {
+                    version_found = true;
+                }
+            } else if exponent_found {
+                return Token::Illegal;
+            } else {
+                decimal_found = true;
+            }
+        } else if line.match_idx(*cur, 'e') || line.match_idx(*cur, 'E') {
+            // Cannot have 2 exponents, or an exponent in a version
+            if exponent_found || version_found {
+                return Token::Illegal;
+            } else {
+                // If we find an exponent, there must be at least 1 more digit
+                // (Trailing decimals are allowed, though!)
+                // Allowed: { var a = 14.; }
+                // Not allowed: { var a = 14e; }
+                if *cur + 1 == line.len() || !line[*cur + 1].is_digit(10) {
+                    return Token::Illegal;
+                } else {
+                    exponent_found = true;
+                }
+            }
+        } else if !line.is_digit_at(*cur) {
+            *cur -= 1;
+            if version_found {
+                return Token::Version(collected);
+            }
+            return Token::DecimalNumber(collected);
+        }
+        collected.push(line[*cur]);
+        *cur += 1;
+    }
+    *cur -= 1;
+    Token::DecimalNumber(collected)
+}
+
+/**
  * Returns the next Token found in the line and increments cur
  * to the end of the Token in the parsed line
  */
 pub fn next_token(line: &Vec<char>, cur: &mut usize) -> Token {
-    let mut string = false;
-    let mut collected = String::new();
-    while *cur < line.len() {
-        // If no characters have been collected, we are reading a new Token
-        if collected.len() == 0 {
-            if line[*cur] == ';' {
-                *cur += 1;
-                return Token::Semicolon;
-            } else if line[*cur] == '{' {
-                *cur += 1;
-                return Token::OpenBrace;
-            } else if line[*cur] == '}' {
-                *cur += 1;
-                return Token::CloseBrace;
-            } else if line[*cur] == '(' {
-                *cur += 1;
-                return Token::OpenParenthesis;
-            } else if line[*cur] == ')' {
-                *cur += 1;
-                return Token::CloseParenthesis;
-            } else if line[*cur] == '[' {
-                *cur += 1;
-                return Token::OpenBracket;
-            } else if line[*cur] == ']' {
-                *cur += 1;
-                return Token::CloseBracket;
-            } else if line[*cur] == '?' {
-                *cur += 1;
-                return Token::Question;
-            } else if line[*cur] == ',' {
-                *cur += 1;
-                return Token::Comma;
-            } else if line[*cur] == ':' {
-                *cur += 1;
-                return Token::Colon;
-            }  else if line[*cur] == '~' {
-                *cur += 1;
-                return Token::Tilda;
-            } else if line[*cur] == '/' {
-                *cur += 1;
-                return Token::Divide;
-            } else if line[*cur] == '.' {
-                *cur += 1;
-                return Token::Dot;
-            } else if line[*cur] == '\"' {
-                collected.push(line[*cur]);
-                string = true;
-            } else if !line[*cur].is_whitespace() {
-                collected.push(line[*cur]);
-            } // else: do nothing, increment cur by 1
-        } else {
-            if string {
-                collected.push(line[*cur]);
-                if line[*cur] == '\"' {
-                    return Token::StringLiteral(collected);
+    let mut next = Token::NoMatch;
+    
+    loop {
+        if *cur >= line.len() {
+            return Token::EOF;
+        }
+
+        let t = match line[*cur] {
+            ';' => Token::Semicolon,
+            '{' => Token::OpenBrace,
+            '}' => Token::CloseBrace,
+            '(' => Token::OpenParenthesis,
+            ')' => Token::CloseParenthesis,
+            '[' => Token::OpenBracket,
+            ']' => Token::CloseBracket,
+            '?' => Token::Question,
+            ',' => Token::Comma,
+            '~' => Token::Tilda,
+            '.' => match_period(line, cur),
+            ':' => match_colon(line, cur),          // : :=
+            '=' => match_equals(line, cur),         // = == =>
+            '+' => match_plus(line, cur),           // + ++ +=
+            '-' => match_minus(line, cur),          // - -- -=
+            '*' => match_star(line, cur),           // * ** *=
+            '/' => match_slash(line, cur),          // / // /* /=
+            '>' => match_rarrow(line, cur),         // > >= >> >>= >>> >>>=
+            '<' => match_larrow(line, cur),         // < <= << <<=
+            '!' => match_exclamation(line, cur),    // ! !=
+            '%' => match_percent(line, cur),        // % %=
+            '&' => match_and(line, cur),            // & && &=
+            '|' => match_or(line, cur),             // | || |=
+            '^' => match_xor(line, cur),            // ^ ^=
+            '"' | '\'' => match_string(line, cur),
+            '0' => {
+                if line.match_idx(*cur + 1, ' ') {
+                    to_decimal_number("0")
+                } else if line.is_hex_delim_at(*cur + 1) {
+                    match_hex_number(line, cur)
+                } else if line.match_idx(*cur + 1, '.') {
+                    match_rational(line, cur)
+                } else {
+                    Token::Illegal
                 }
-            } else if line[*cur] == '.' && (collected == "^0" || collected == "0" || collected == "^0.4" || collected == "0.4") {
-               collected.push('.');
-            } else if line[*cur] == '0' && collected == "^" {
-               collected.push('0');
-            } else if line[*cur] == '>' && collected == "=" {
-                *cur += 1;
-                return Token::Arrow;
-            } else if line[*cur] == '*' && collected == "*" {
-                *cur += 1;
-                return Token::Power;
-            } else if line[*cur] == '=' && collected == "=" {
-                *cur += 1;
-                return Token::Equals;
-            } else if line[*cur] == '=' && collected == "<" {
-                *cur += 1;
-                return Token::LessThanOrEquals;
-            } else if line[*cur] == '=' && collected == ">" {
-                *cur += 1;
-                return Token::GreaterThanOrEquals;
-            } else if line[*cur] == '=' && collected == "!" {
-                *cur += 1;
-                return Token::NotEquals;
-            } else if line[*cur] == '=' && collected == "|" {
-                *cur += 1;
-                return Token::OrEquals;
-            } else if line[*cur] == '=' && collected == "+" {
-                *cur += 1;
-                return Token::PlusEquals;
-            } else if line[*cur] == '=' && collected == "-" {
-                *cur += 1;
-                return Token::MinusEquals;
-            } else if line[*cur] == '=' && collected == "*" {
-                *cur += 1;
-                return Token::MultiplyEquals;
-            } else if line[*cur] == '=' && collected == "/" {
-                *cur += 1;
-                return Token::DivideEquals;
-            } else if line[*cur] == '=' && collected == "%" {
-                *cur += 1;
-                return Token::ModEquals;
-            } else if line[*cur] == '=' && collected == "<<" {
-                *cur += 1;
-                return Token::ShiftLeftEquals;
-            } else if line[*cur] == '=' && collected == ">>" {
-                *cur += 1;
-                return Token::ShiftRightEquals;
-            } else if line[*cur] == '+' && collected == "+" {
-                *cur += 1;
-                return Token::Increment;
-            } else if line[*cur] == '-' && collected == "-" {
-                *cur += 1;
-                return Token::Decrement;
-            } else if line[*cur] == '>' && collected == ">" {
-                *cur += 1;
-                return Token::ShiftRight;
-            } else if line[*cur] == '|' && collected == "|" {
-                *cur += 1;
-                return Token::LogicalOr; 
-            } else if line[*cur] == '&' && collected == "&" {
-                *cur += 1;
-                return Token::LogicalAnd;
-            } else if collected == "^" {
-                return Token::BitwiseXor;
-            } else if collected == "<<" {
-                return Token::ShiftLeft;
-            } else if collected == "-" {
-                return Token::Minus;
-            } else if collected == "+" {
-                return Token::Plus;
-            } else if collected == "|" {
-                return Token::BitwiseOr;
-            } else if collected == "&" {
-                return Token::BitwiseAnd;
-            } else if collected == "<" {
-                return Token::LessThan;
-            } else if collected == "=" {
-                return Token::Assignment;
-            } else if collected == "!" {
-                return Token::Exclamation;
-            } else if collected == ">" {
-                return Token::GreaterThan;
-            } else if collected == "*" {
-                return Token::Multiply;
-            } else if line[*cur].is_stop_token() {
-                return match_collected(collected);
-            } else {
-                collected.push(line[*cur]);
+            },
+            non if non.is_whitespace() => skip_whitespace(line, cur),
+            num if num.starts_rational() => match_rational(line, cur),
+            chr if chr.starts_iden_or_keyword() => match_identifier_or_keyword(line, cur),
+            _ => Token::Illegal
+        };
+
+        if t == Token::Illegal {
+            return t;
+        } else {
+            *cur += 1;
+            if t != Token::NoMatch {
+                return t;
+            } else if *cur >= line.len() {
+                return Token::EOF;
             }
         }
-        *cur += 1;
     }
-    return match match_collected(collected) {
-        Token::NoMatch => Token::EOF,
-        other => other
-    }
+    next
 }
 
 // Return the next token in the line, without incrementing cur
@@ -765,40 +1185,984 @@ pub fn peek_token(line: &Vec<char>, cur: &mut usize) -> Token {
 mod tests {
     use super::*;
 
-    /* String Literal */
+    fn fail_test(expect: Token, actual: Token) {
+        panic!("Expected: {:?} | Actual: {:?}", expect, actual);
+    }
+
+    fn expect_next_token(s: &Vec<char>, cur: &mut usize, t: Token) {
+        match next_token(&s, cur) {
+            ref next if *next == t => (),
+            actual => fail_test(t, actual)
+        };
+    }
+
+    /* Colon */
 
     #[test]
-    fn string_literal_test1() {
-        let path = String::from("\"\"");
-        let chars = path.chars().collect::<Vec<char>>();
-        let cur = &mut 0; 
-        let actual = next_token(&chars, cur);
-        match actual {
-            Token::StringLiteral(path) => assert_eq!(&path, "\"\""), 
-            actual => panic!("Expected: {:?} | Actual: {:?}", Token::StringLiteral("\"\"".to_string()), actual)
-        }
+    fn test_pragma1() {
+        let s = to_chars("^0.4.25;");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::BitwiseXor);
+        expect_next_token(&s, cur, Token::Version(String::from("0.4.25")));
+        expect_next_token(&s, cur, Token::Semicolon);
     }
 
     #[test]
-    fn string_literal_test2() {
-        let chars = String::from("\"test_file\"").chars().collect::<Vec<char>>();
-        let cur = &mut 0; 
-        let actual = next_token(&chars, cur);
-        match actual {
-            Token::StringLiteral(path) => assert_eq!(&path, "\"test_file\""), 
-            actual => panic!("Expected: {:?} | Actual: {:?}", Token::StringLiteral("\"test_file\"".to_string()), actual)
-        }
+    fn test_colon() {
+        let s = to_chars(":");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Colon);
     }
 
     #[test]
-    fn string_literal_test3() {
-        let path = String::from("\"test_file.sol\"");
-        let chars = path.chars().collect::<Vec<char>>();
+    fn test_asmassign() {
+        let s = to_chars(":=");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::ASMAssign);
+    }
+
+    /* Equals  */
+
+    #[test]
+    fn test_assignment() {
+        let s = to_chars("=");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Assignment);
+    }
+
+    #[test]
+    fn test_equals() {
+        let s = to_chars("==");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Equals);
+    }
+
+    #[test]
+    fn test_arrow() {
+        let s = to_chars("=>");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Arrow);
+    }
+
+    /* Plus */
+
+    #[test]
+    fn test_plus() {
+        let s = to_chars("+");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Plus);
+    }
+
+    #[test]
+    fn test_increment() {
+        let s = to_chars("++");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Increment);
+    }
+
+    #[test]
+    fn test_plus_equals() {
+        let s = to_chars("+=");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::PlusEquals);
+    }
+
+    /* Minus */
+
+    #[test]
+    fn test_minus() {
+        let s = to_chars("-");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Minus);
+    }
+
+    #[test]
+    fn test_decrement() {
+        let s = to_chars("--");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Decrement);
+    }
+
+    #[test]
+    fn test_minus_equals() {
+        let s = to_chars("-=");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::MinusEquals);
+    }
+
+    /* Star */
+
+    #[test]
+    fn test_multiply() {
+        let s = to_chars("*");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Multiply);
+    }
+
+    #[test]
+    fn test_power() {
+        let s = to_chars("**");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Power);
+    }
+
+    #[test]
+    fn test_multiply_equals() {
+        let s = to_chars("*=");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::MultiplyEquals);
+    }
+    
+    /* Slash */
+
+    #[test]
+    fn test_divide() {
+        let s = to_chars("/");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Divide);
+    }
+
+    #[test]
+    fn test_comment_single() {
+        let s = to_chars("//");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::CommentSingle);
+    }
+
+    #[test]
+    fn test_comment_multi() {
+        let s = to_chars("/*");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::CommentMulti);
+    }
+
+    #[test]
+    fn test_divide_equals() {
+        let s = to_chars("/=");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::DivideEquals);
+    }
+
+    /* RArrow */
+
+    #[test]
+    fn test_greater_than() {
+        let s = to_chars(">");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::GreaterThan);
+    }
+
+    #[test]
+    fn test_greater_than_or_equals() {
+        let s = to_chars(">=");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::GreaterThanOrEquals);
+    }
+
+    #[test]
+    fn test_shift_right() {
+        let s = to_chars(">>");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::ShiftRight);
+    }
+
+    #[test]
+    fn test_shift_right_equals() {
+        let s = to_chars(">>=");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::ShiftRightEquals);
+    }
+
+    #[test]
+    fn test_thing_0() { // TODO
+        let s = to_chars(">>>");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Illegal);
+    }
+
+    #[test]
+    fn test_thing_1() { // TODO
+        let s = to_chars(">>>=");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Illegal);
+    }
+
+    /* LArrow */
+
+    #[test]
+    fn test_less_than() {
+        let s = to_chars("<");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::LessThan);
+    }
+
+    #[test]
+    fn test_less_than_or_equals() {
+        let s = to_chars("<=");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::LessThanOrEquals);
+    }
+
+    #[test]
+    fn test_shift_left() {
+        let s = to_chars("<<");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::ShiftLeft);
+    }
+
+    #[test]
+    fn test_shift_left_equals() {
+        let s = to_chars("<<=");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::ShiftLeftEquals);
+    }
+
+    /* Exclamation */
+
+    #[test]
+    fn test_exclamation() {
+        let s = to_chars("!");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Exclamation);
+    }
+
+    #[test]
+    fn test_not_equals() {
+        let s = to_chars("!=");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::NotEquals);
+    }
+
+    /* Percent */
+
+    #[test]
+    fn test_modulus() {
+        let s = to_chars("%");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Modulus);
+    }
+
+    #[test]
+    fn test_mod_equals() {
+        let s = to_chars("%=");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::ModEquals);
+    }
+
+    /* And */
+
+    #[test]
+    fn test_bitwise_and() {
+        let s = to_chars("&");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::BitwiseAnd);
+    }
+
+    #[test]
+    fn test_logical_and() {
+        let s = to_chars("&&");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::LogicalAnd);
+    }
+
+    #[test]
+    fn test_and_equals() {
+        let s = to_chars("&=");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::AndEquals);
+    }
+
+    /* Or */
+
+    #[test]
+    fn test_bitwise_or() {
+        let s = to_chars("|");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::BitwiseOr);
+    }
+
+    #[test]
+    fn test_logical_or() {
+        let s = to_chars("||");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::LogicalOr);
+    }
+
+    #[test]
+    fn test_or_equals() {
+        let s = to_chars("|=");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::OrEquals);
+    }
+
+    /* Xor */
+
+    #[test]
+    fn test_bitwise_xor() {
+        let s = to_chars("^");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::BitwiseXor);
+    }
+
+    #[test]
+    fn test_xor_equals() {
+        let s = to_chars("^=");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::XorEquals);
+    }
+
+    /* StringLiteral */
+
+    #[test]
+    fn test_string_literal_0() {
+        let s = to_chars("\"\"");
         let cur = &mut 0; 
-        let actual = next_token(&chars, cur);
-        match actual {
-            Token::StringLiteral(path) => assert_eq!(&path, "\"test_file.sol\""), 
-            actual => panic!("Expected: {:?} | Actual: {:?}", Token::StringLiteral("\"test_file.sol\"".to_string()), actual)
-        }
+        expect_next_token(&s, cur, Token::StringLiteral(s.as_string()));
+    }
+
+    #[test]
+    fn test_string_literal_1() {
+        let s = to_chars("''");
+        let cur = &mut 0; 
+        expect_next_token(&s, cur, Token::StringLiteral(s.as_string()));
+    }
+
+    #[test]
+    fn test_string_literal_2() {
+        let s = to_chars("\"test.sol\"");
+        let cur = &mut 0; 
+        expect_next_token(&s, cur, Token::StringLiteral(s.as_string()));
+    }
+
+    /* Whitespace */
+
+    #[test]
+    fn test_whitespace_0() {
+        let s = to_chars(" ++");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Increment);
+    }
+
+    #[test]
+    fn test_whitespace_1() {
+        let s = to_chars("  ++  +");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Increment);
+        expect_next_token(&s, cur, Token::Plus);
+    }
+
+    #[test]
+    fn test_whitespace_3() {
+        let s = to_chars(" ++  -- / \"literal\"");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Increment);
+        expect_next_token(&s, cur, Token::Decrement);
+        expect_next_token(&s, cur, Token::Divide);
+        expect_next_token(&s, cur, to_string_literal("\"literal\""));
+    }
+
+    /* Number literals */
+
+    #[test]
+    fn test_numbers_0() {
+        let s = to_chars("1 12+123");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, to_decimal_number("1"));
+        expect_next_token(&s, cur, to_decimal_number("12"));
+        expect_next_token(&s, cur, Token::Plus);
+        expect_next_token(&s, cur, to_decimal_number("123"));
+    }
+
+    #[test]
+    fn test_numbers_1() {
+        let s = to_chars("0 0.1");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, to_decimal_number("0"));
+        expect_next_token(&s, cur, to_decimal_number("0.1"));
+    }
+
+    #[test]
+    fn test_numbers_2() {
+        let s = to_chars("01234");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Illegal);
+    }
+
+    #[test]
+    fn test_numbers_3() {
+        let s = to_chars("1.2e3 4E5");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, to_decimal_number("1.2e3"));
+        expect_next_token(&s, cur, to_decimal_number("4E5"));
+    }
+
+    #[test]
+    fn test_numbers_4() {
+        let s = to_chars(".14 .Iden Iden.Iden");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, to_decimal_number(".14"));
+        expect_next_token(&s, cur, Token::Dot);
+        expect_next_token(&s, cur, to_identifier("Iden"));
+        expect_next_token(&s, cur, to_identifier("Iden"));
+        expect_next_token(&s, cur, Token::Dot);
+        expect_next_token(&s, cur, to_identifier("Iden"));
+    }
+
+    #[test]
+    fn test_hex_numbers_0() {
+        let s = to_chars("0x");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Illegal);
+    }
+
+    #[test]
+    fn test_hex_numbers_1() {
+        let s = to_chars("0xFF 0 0xF");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, to_hex_number("0xFF"));
+        expect_next_token(&s, cur, to_decimal_number("0"));
+        expect_next_token(&s, cur, to_hex_number("0xF"));
+    }
+
+    #[test]
+    fn test_hex_numbers_2() {
+        let s = to_chars("0xdf 0xZZ");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, to_hex_number("0xdf"));
+        expect_next_token(&s, cur, Token::Illegal);
+    }
+
+    /* Keywords */
+
+    #[test]
+    fn test_address() {
+        let s = to_chars("address");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Address);
+    }
+
+    #[test]
+    fn test_anonymous() {
+        let s = to_chars("anonymous");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Anonymous);
+    }
+
+    #[test]
+    fn test_as() {
+        let s = to_chars("as");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::As);
+    }
+
+    #[test]
+    fn test_assembly() {
+        let s = to_chars("assembly");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Assembly);
+    }
+
+    #[test]
+    fn test_bool() {
+        let s = to_chars("bool");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Bool);
+    }
+
+    #[test]
+    fn test_break() {
+        let s = to_chars("break");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Break);
+    }
+
+    #[test]
+    fn test_byte() {
+        let s = to_chars("byte");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Byte);
+    }
+
+    #[test]
+    fn test_bytes() {
+        let s = to_chars("bytes");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Bytes);
+    }
+
+    #[test]
+    fn test_bytes1() {
+        let s = to_chars("bytes1");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Bytes1);
+    }
+
+    #[test]
+    fn test_bytes32() {
+        let s = to_chars("bytes32");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Bytes32);
+    }
+
+    #[test]
+    fn test_constant() {
+        let s = to_chars("constant");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Constant);
+    }
+
+    #[test]
+    fn test_continue() {
+        let s = to_chars("continue");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Continue);
+    }
+
+    #[test]
+    fn test_contract() {
+        let s = to_chars("contract");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Contract);
+    }
+
+    #[test]
+    fn test_days() {
+        let s = to_chars("days");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Days);
+    }
+
+    #[test]
+    fn test_delete() {
+        let s = to_chars("delete");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Delete);
+    }
+
+    #[test]
+    fn test_do() {
+        let s = to_chars("do");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Do);
+    }
+
+    #[test]
+    fn test_else() {
+        let s = to_chars("else");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Else);
+    }
+
+    #[test]
+    fn test_emit() {
+        let s = to_chars("emit");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Emit);
+    }
+
+    #[test]
+    fn test_enum() {
+        let s = to_chars("enum");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Enum);
+    }
+
+    #[test]
+    fn test_ether() {
+        let s = to_chars("ether");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Ether);
+    }
+
+    #[test]
+    fn test_event() {
+        let s = to_chars("event");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Event);
+    }
+
+    #[test]
+    fn test_external() {
+        let s = to_chars("external");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::External);
+    }
+
+    #[test]
+    fn test_false() {
+        let s = to_chars("false");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::False);
+    }
+
+    #[test]
+    fn test_finney() {
+        let s = to_chars("finney");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Finney);
+    }
+
+    #[test]
+    fn test_fixed() {
+        let s = to_chars("fixed");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Fixed);
+    }
+
+    #[test]
+    fn test_for() {
+        let s = to_chars("for");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::For);
+    }
+
+    #[test]
+    fn test_from() {
+        let s = to_chars("from");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::From);
+    }
+
+    #[test]
+    fn test_function() {
+        let s = to_chars("function");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Function);
+    }
+
+    #[test]
+    fn test_hex() {
+        let s = to_chars("hex");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Illegal);
+    }
+
+    #[test]
+    fn test_hex_literal1() {
+        let s = to_chars("hex\"DEADBEEF\"");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, to_hex_literal("hex\"DEADBEEF\""));
+    }
+
+    #[test]
+    fn test_hex_literal2() {
+        let s = to_chars("hex\"ZZZZ\"");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Illegal);
+    }
+
+    #[test]
+    fn test_hours() {
+        let s = to_chars("hours");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Hours);
+    }
+
+    #[test]
+    fn test_if() {
+        let s = to_chars("if");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::If);
+    }
+
+    #[test]
+    fn test_import() {
+        let s = to_chars("import");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Import);
+    }
+
+    #[test]
+    fn test_indexed() {
+        let s = to_chars("indexed");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Indexed);
+    }
+
+    #[test]
+    fn test_int() {
+        let s = to_chars("int");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Int);
+    }
+
+    #[test]
+    fn test_int8() {
+        let s = to_chars("int8");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Int8);
+    }
+
+    #[test]
+    fn test_int16() {
+        let s = to_chars("int16");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Int16);
+    }
+
+    #[test]
+    fn test_int256() {
+        let s = to_chars("int256");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Int256);
+    }
+
+    #[test]
+    fn test_interface() {
+        let s = to_chars("interface");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Interface);
+    }
+
+    #[test]
+    fn test_internal() {
+        let s = to_chars("internal");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Internal);
+    }
+
+    #[test]
+    fn test_is() {
+        let s = to_chars("is");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Is);
+    }
+
+    #[test]
+    fn test_let() {
+        let s = to_chars("let");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Let);
+    }
+
+    #[test]
+    fn test_library() {
+        let s = to_chars("library");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Library);
+    }
+
+    #[test]
+    fn test_mapping() {
+        let s = to_chars("mapping");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Mapping);
+    }
+
+    #[test]
+    fn test_memory() {
+        let s = to_chars("memory");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Memory);
+    }
+
+    #[test]
+    fn test_minutes() {
+        let s = to_chars("minutes");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Minutes);
+    }
+
+    #[test]
+    fn test_modifier() {
+        let s = to_chars("modifier");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Modifier);
+    }
+
+    #[test]
+    fn test_new() {
+        let s = to_chars("new");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::New);
+    }
+
+    #[test]
+    fn test_payable() {
+        let s = to_chars("payable");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Payable);
+    }
+
+    #[test]
+    fn test_pragma() {
+        let s = to_chars("pragma");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Pragma);
+    }
+
+    #[test]
+    fn test_private() {
+        let s = to_chars("private");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Private);
+    }
+
+    #[test]
+    fn test_public() {
+        let s = to_chars("public");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Public);
+    }
+    
+    #[test]
+    fn test_pure() {
+        let s = to_chars("pure");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Pure);
+    }
+
+    #[test]
+    fn test_return() {
+        let s = to_chars("return");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Return);
+    }
+
+    #[test]
+    fn test_returns() {
+        let s = to_chars("returns");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Returns);
+    }
+
+    #[test]
+    fn test_seconds() {
+        let s = to_chars("seconds");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Seconds);
+    }
+
+    #[test]
+    fn test_storage() {
+        let s = to_chars("storage");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Storage);
+    }
+
+    #[test]
+    fn test_string() {
+        let s = to_chars("string");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::String);
+    }
+
+    #[test]
+    fn test_struct() {
+        let s = to_chars("struct");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Struct);
+    }
+
+    #[test]
+    fn test_szabo() {
+        let s = to_chars("szabo");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Szabo);
+    }
+
+    #[test]
+    fn test_throw() {
+        let s = to_chars("throw");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Throw);
+    }
+
+    #[test]
+    fn test_true() {
+        let s = to_chars("true");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::True);
+    }
+
+    #[test]
+    fn test_ufixed() {
+        let s = to_chars("ufixed");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Ufixed);
+    }
+
+    #[test]
+    fn test_uint() {
+        let s = to_chars("uint");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Uint);
+    }
+
+    #[test]
+    fn test_uint8() {
+        let s = to_chars("uint8");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Uint8);
+    }
+
+    #[test]
+    fn test_uint16() {
+        let s = to_chars("uint16");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Uint16);
+    }
+
+    #[test]
+    fn test_uint256() {
+        let s = to_chars("uint256");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Uint256);
+    }
+
+    #[test]
+    fn test_using() {
+        let s = to_chars("using");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Using);
+    }
+
+    #[test]
+    fn test_var() {
+        let s = to_chars("var");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Var);
+    }
+
+    #[test]
+    fn test_view() {
+        let s = to_chars("view");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::View);
+    }
+
+    #[test]
+    fn test_weeks() {
+        let s = to_chars("weeks");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Weeks);
+    }
+
+    #[test]
+    fn test_wei() {
+        let s = to_chars("wei");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Wei);
+    }
+
+    #[test]
+    fn test_while() {
+        let s = to_chars("while");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::While);
+    }
+
+    #[test]
+    fn test_years() {
+        let s = to_chars("years");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Years);
+    }
+
+    #[test]
+    fn test_placeholder() {
+        let s = to_chars("_");
+        let cur = &mut 0;
+        expect_next_token(&s, cur, Token::Placeholder);
     }
 }

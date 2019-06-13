@@ -33,7 +33,8 @@ mod parse_tests {
                     node: lex_4_25::Token::Pragma,
                     children: vec![
                         Box::new(lex_4_25::Token::Identifier("solidity".to_string()).to_leaf()),
-                        Box::new(lex_4_25::Token::Version("^0.4.25".to_string()).to_leaf())
+                        Box::new(lex_4_25::Token::BitwiseXor.to_leaf()),
+                        Box::new(lex_4_25::Token::Version("0.4.25".to_string()).to_leaf())
                     ]
                 }
             ]

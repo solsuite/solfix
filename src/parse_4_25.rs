@@ -98,10 +98,15 @@ pub fn parse_pragma(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
         }
         _ => panic!("Invalid pragma declaration")
     }
+    // Skip leading '^' if found
+    match lex_4_25::peek_token(&chars, cur) {
+        lex_4_25::Token::BitwiseXor => result.add_child(lex_4_25::next_token(&chars, cur)),
+        _ => ()
+    }
     match lex_4_25::next_token(&chars, cur) {
         lex_4_25::Token::Version(version) => {
-            if version != "^0.4.25" && version != "0.4.25" {
-                panic!("Invalid source file: version other than 0.4.25 specfied")
+            if version != "0.4.25" {
+                panic!("Invalid source file: version other than 0.4.25 specified")
             }
             result.add_child(lex_4_25::Token::Version(version));
         }
