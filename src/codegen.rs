@@ -129,8 +129,73 @@ fn generate_inheritance_specifier(block: &parse_4_25::ParseNode) -> String {
 
 fn generate_contract_part(block: &parse_4_25::ParseNode) -> String {
     let mut result = String::new();
+    match block.node {
+        lex_4_25::Token::OpenBrace => result.push('{'),
+        _ => panic!("Invalid contract part")
+    }
+    for child in &block.children {
+        match child.node {
+            lex_4_25::Token::Enum => result.push_str(&generate_enum(&child)),
+            lex_4_25::Token::Event => result.push_str(&generate_event(&child)),
+            lex_4_25::Token::Function => result.push_str(&generate_function(&child)),
+            lex_4_25::Token::Modifier => result.push_str(&generate_modifier(&child)),
+            lex_4_25::Token::Using => result.push_str(&generate_using_for(&child)),
+            lex_4_25::Token::Struct => result.push_str(&generate_struct(&child)),
+            _ => panic!("Invalid contract part")
+        }
+    }
+    result.push('}');
     result
 }
+
+/*** Sub-contract Structures ***/
+
+fn generate_enum(node: &parse_4_25::ParseNode) -> String { 
+    let mut result = String::new();
+    match node.node {
+        lex_4_25::Token::Enum => result.push_str("enum"),
+        _ => panic!("Invalid enum definition")
+    }
+    result.push(' ');
+    match &node.children[0].node {
+        lex_4_25::Token::Identifier(name) => result.push_str(&name),
+        _ => panic!("Invalid enum definition")
+    }
+    result.push(' ');
+    match &node.children[1].node {
+        lex_4_25::Token::OpenBrace => result.push_str("{"),
+        _ => panic!("Invalid enum definition")
+    }
+    if node.children[1].children.len() > 0 {
+        for i in 0..=node.children[1].children.len() - 1 {
+            result.push('\n');
+            match &node.children[1].children[i].node {
+                lex_4_25::Token::Identifier(name) => {
+                    result.push_str("    ");
+                    result.push_str(&name);
+                }
+                _ => panic!("Invalid enum definition")
+            }
+            if i != node.children[1].children.len() - 1 {
+                result.push(',');
+            } else {
+                result.push('\n');
+            }
+        }
+    }
+    result.push_str("}");
+    result
+}
+
+fn generate_event(node: &parse_4_25::ParseNode) -> String { String::new() }
+
+fn generate_function(node: &parse_4_25::ParseNode) -> String { String::new() }
+
+fn generate_modifier(node: &parse_4_25::ParseNode) -> String { String::new() }
+
+fn generate_using_for(node: &parse_4_25::ParseNode) -> String { String::new() }
+
+fn generate_struct(node: &parse_4_25::ParseNode) -> String { String::new() }
 
 /*** Types ***/
 
@@ -197,6 +262,109 @@ mod tests {
         let actual_generated = generate_inheritance_specifier(&node);
         let expected_generated = "is\n    A\n";
         assert_eq!(actual_generated, expected_generated);
+    }
+
+    #[test]
+    fn generate_inheritance_specifier_test2() {
+        let node = parse_4_25::ParseNode {
+            node: lex_4_25::Token::Is,
+            children: vec![
+                Box::new(parse_4_25::ParseNode {
+                    node: lex_4_25::Token::OpenParenthesis,
+                    children: vec![
+                        Box::new(parse_4_25::ParseNode {
+                            node: lex_4_25::Token::UserDefinedTypeName,
+                            children: vec![
+                                Box::new(lex_4_25::Token::Identifier("A".to_string()).to_leaf())
+                            ]
+                        }),
+                        Box::new(parse_4_25::ParseNode {
+                            node: lex_4_25::Token::UserDefinedTypeName,
+                            children: vec![
+                                Box::new(lex_4_25::Token::Identifier("Bat".to_string()).to_leaf()),
+                                Box::new(lex_4_25::Token::Identifier("Car".to_string()).to_leaf())
+                            ]
+                        })
+                    ]
+                })
+            ]
+        };
+        let actual_generated = generate_inheritance_specifier(&node);
+        let expected_generated = "is\n    A,\n    Bat.Car\n";
+        assert_eq!(actual_generated, expected_generated);
+    }
+
+    #[test]
+    fn generate_inheritance_specifier_test3() {
+        let node = parse_4_25::ParseNode {
+            node: lex_4_25::Token::Is,
+            children: vec![
+                Box::new(parse_4_25::ParseNode {
+                    node: lex_4_25::Token::OpenParenthesis,
+                    children: vec![
+                        Box::new(parse_4_25::ParseNode {
+                            node: lex_4_25::Token::UserDefinedTypeName,
+                            children: vec![
+                                Box::new(lex_4_25::Token::Identifier("A".to_string()).to_leaf())
+                            ]
+                        }),
+                        Box::new(parse_4_25::ParseNode {
+                            node: lex_4_25::Token::UserDefinedTypeName,
+                            children: vec![
+                                Box::new(lex_4_25::Token::Identifier("Bat".to_string()).to_leaf()),
+                                Box::new(lex_4_25::Token::Identifier("Car".to_string()).to_leaf())
+                            ]
+                        }),
+                        Box::new(parse_4_25::ParseNode {
+                            node: lex_4_25::Token::UserDefinedTypeName,
+                            children: vec![
+                                Box::new(lex_4_25::Token::Identifier("foo".to_string()).to_leaf()),
+                                Box::new(lex_4_25::Token::Identifier("bar".to_string()).to_leaf()),
+                                Box::new(lex_4_25::Token::Identifier("baz".to_string()).to_leaf())
+                            ]
+                        })
+                    ]
+                })
+            ]
+        };
+        let actual_generated = generate_inheritance_specifier(&node);
+        let expected_generated = "is\n    A,\n    Bat.Car,\n    foo.bar.baz\n";
+        assert_eq!(actual_generated, expected_generated);
+    }
+
+    #[test]
+    fn generate_enum_test1() {
+        let node = parse_4_25::ParseNode {
+            node: lex_4_25::Token::Enum,
+            children: vec![
+                Box::new(lex_4_25::Token::Identifier("empty".to_string()).to_leaf()),
+                Box::new(lex_4_25::Token::OpenBrace.to_leaf())
+            ]
+        };
+        let actual_generated = generate_enum(&node);
+        let expected_generated = String::from("enum empty {}");
+        assert_eq!(expected_generated, actual_generated);
+    }
+
+    #[test]
+    fn generate_enum_test2() {
+        let node = parse_4_25::ParseNode {
+            node: lex_4_25::Token::Enum,
+            children: vec![
+                Box::new(lex_4_25::Token::Identifier("Letters".to_string()).to_leaf()),
+                Box::new(parse_4_25::ParseNode {
+                    node: lex_4_25::Token::OpenBrace,
+                    children: vec![
+                        Box::new(lex_4_25::Token::Identifier("A".to_string()).to_leaf()),
+                        Box::new(lex_4_25::Token::Identifier("B".to_string()).to_leaf()),
+                        Box::new(lex_4_25::Token::Identifier("C".to_string()).to_leaf())
+                    ]
+                })
+            ]
+        };
+        let actual_generated = generate_enum(&node);
+        let expected_generated = String::from("enum Letters {\n    A,\n    B,\n    C\n}");
+        assert_eq!(expected_generated, actual_generated);
     }
 
     #[test]
