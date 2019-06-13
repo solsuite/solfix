@@ -112,7 +112,9 @@ fn generate_inheritance_specifier(block: &parse_4_25::ParseNode) -> String {
         lex_4_25::Token::OpenParenthesis => (),
         _ => panic!("Invalid inheritance specifier")
     }
-    for i in 0..=block.children[0].children.len() {
+    for i in 0..=block.children[0].children.len() - 1 {
+        // FIXME Replace with result.indent()
+        result.push_str("    ");
         result.push_str(&generate_user_defined_type_name(&block.children[0].children[i]));
         if i != block.children[0].children.len() - 1 {
             result.push_str(",\n");
@@ -139,7 +141,6 @@ fn generate_user_defined_type_name(type_name: &parse_4_25::ParseNode) -> String 
         _ => panic!("Invalid user defined type name")
     }
     for i in 0..=type_name.children.len() - 1{
-        println!("Got here");
         match &type_name.children[i].node {
             lex_4_25::Token::Identifier(name) => result.push_str(&name),
             _ => panic!("Invalid user defined type name")
@@ -173,6 +174,29 @@ mod tests {
         let actual_generated = generate(tree);
         let expected_generated = "pragma solidity 0.4.25;";
         assert_eq!(expected_generated, actual_generated);
+    }
+
+    #[test]
+    fn generate_inheritance_specifier_test1() {
+        let node = parse_4_25::ParseNode {
+            node: lex_4_25::Token::Is,
+            children: vec![
+                Box::new(parse_4_25::ParseNode {
+                    node: lex_4_25::Token::OpenParenthesis,
+                    children: vec![
+                        Box::new(parse_4_25::ParseNode {
+                            node: lex_4_25::Token::UserDefinedTypeName,
+                            children: vec![
+                                Box::new(lex_4_25::Token::Identifier("A".to_string()).to_leaf())
+                            ]
+                        })
+                    ]
+                })
+            ]
+        };
+        let actual_generated = generate_inheritance_specifier(&node);
+        let expected_generated = "is\n    A\n";
+        assert_eq!(actual_generated, expected_generated);
     }
 
     #[test]
