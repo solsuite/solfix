@@ -1,5 +1,7 @@
 extern crate solfix;
 
+//Solfix
+
 #[cfg(test)]
 mod parser_integration_tests {
     use solfix::lex_4_25;
@@ -28,7 +30,7 @@ mod parser_integration_tests {
                         Box::new(ParseNode {
                             node: lex_4_25::Token::OpenBrace,
                             children: vec![
-                                Box::new(ParseNode { 
+                                Box::new(ParseNode {
                                     node: lex_4_25::Token::StateVariable,
                                     children: vec![
                                         Box::new(lex_4_25::Token::Address.to_leaf()),
@@ -36,7 +38,7 @@ mod parser_integration_tests {
                                         Box::new(lex_4_25::Token::Identifier("owner".to_string()).to_leaf())
                                     ]
                                 }),
-                                Box::new(ParseNode { 
+                                Box::new(ParseNode {
                                     node: lex_4_25::Token::Modifier,
                                     children: vec![
                                         Box::new(lex_4_25::Token::Identifier("onlyOwner".to_string()).to_leaf()),
@@ -195,4 +197,4 @@ mod parser_integration_tests {
         assert_eq!(expected_tree, actual_tree);
     }
     */
-} 
+}
