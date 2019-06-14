@@ -198,7 +198,6 @@ fn generate_event(node: &parse_4_25::ParseNode) -> String {
         lex_4_25::Token::Identifier(name) => result.push_str(&name),
         _ => panic!("Invalid event definition")
     }
-    result.push(' ');
     match &node.children[1].node {
         lex_4_25::Token::OpenParenthesis => result.push('('),
         _ => panic!("Invalid event definition")
@@ -216,6 +215,7 @@ fn generate_event(node: &parse_4_25::ParseNode) -> String {
         }
     }
     result.push(')');
+    result.push(';');
     result
 }
 
@@ -228,16 +228,16 @@ fn generate_event_parameter(node: &parse_4_25::ParseNode) -> String {
     // Format the type name of the event parameter and append it to the result
     result.push_str(&generate_type_name(&node.children[0]));
     if node.children.len() == 2 {
-        match &node.children[0].node {
+        match &node.children[1].node {
             lex_4_25::Token::Indexed => result.push_str(" indexed"),
             _ => panic!("Invalid event parameter")
         }
     } else if node.children.len() == 3 {
-        match &node.children[0].node {
+        match &node.children[1].node {
             lex_4_25::Token::Indexed => result.push_str(" indexed "),
             _ => panic!("Invalid event parameter")
         }
-        match &node.children[1].node {
+        match &node.children[2].node {
             lex_4_25::Token::Identifier(name) => result.push_str(&name),
             _ => panic!("Invalid event parameter")
         }
@@ -247,13 +247,79 @@ fn generate_event_parameter(node: &parse_4_25::ParseNode) -> String {
     result
 }
 
-fn generate_function(node: &parse_4_25::ParseNode) -> String { String::new() }
+fn generate_function(node: &parse_4_25::ParseNode) -> String {
+    let mut result = String::new();
+    result
+}
 
-fn generate_modifier(node: &parse_4_25::ParseNode) -> String { String::new() }
+fn generate_modifier(node: &parse_4_25::ParseNode) -> String {
+    let mut result = String::new();
+    result
+}
 
-fn generate_using_for(node: &parse_4_25::ParseNode) -> String { String::new() }
+fn generate_using_for(node: &parse_4_25::ParseNode) -> String {
+    let mut result = String::new();
+    result
+}
 
-fn generate_struct(node: &parse_4_25::ParseNode) -> String { String::new() }
+fn generate_struct(node: &parse_4_25::ParseNode) -> String {
+    let mut result = String::new();
+    match node.node {
+        lex_4_25::Token::Struct => result.push_str("struct"),
+        _ => panic!("Invalid struct definition")
+    }
+    result.push(' ');
+    match &node.children[0].node {
+        lex_4_25::Token::Identifier(name) => result.push_str(&name),
+        _ => panic!("Invalid struct definition")
+    }
+    result.push(' ');
+    match &node.children[1].node {
+        lex_4_25::Token::OpenBrace => result.push('{'),
+        _ => panic!("Invalid struct definition")
+    }
+    for i in 0..=node.children[1].children.len() - 1 {
+        result.push('\n');
+        result.push_str("    ");
+        result.push_str(&generate_variable_declaration(&node.children[1].children[i]));
+        result.push(';');
+        if i == node.children[1].children.len() - 1 {
+            result.push('\n');
+        }
+    }
+    result.push('}');
+    result
+}
+
+fn generate_variable_declaration(node: &parse_4_25::ParseNode) -> String {
+    let mut result = String::new();
+    match node.node {
+        lex_4_25::Token::VariableDeclaration => (),
+        _ => panic!("Invalid variable declaration")
+    }
+    result.push_str(&generate_type_name(&node.children[0])); 
+    result.push(' ');
+    if node.children.len() == 2 {
+        match &node.children[1].node {
+            lex_4_25::Token::Identifier(name) => result.push_str(&name),
+            _ => panic!("Invalid variable declaration")
+        }
+    } else if node.children.len() == 3 {
+        match &node.children[1].node {
+            lex_4_25::Token::Memory => result.push_str("memory"),
+            lex_4_25::Token::Storage => result.push_str("storage"),
+            _ => panic!("Invalid variable declaration")
+        }
+        result.push(' ');
+        match &node.children[1].node {
+            lex_4_25::Token::Identifier(name) => result.push_str(&name),
+            _ => panic!("Invalid variable declaration")
+        }
+    } else {
+        panic!("Invalid variable declaration");
+    }
+    result
+}
 
 /*** Types ***/
 
@@ -564,6 +630,86 @@ mod tests {
         };
         let actual_generated = generate_enum(&node);
         let expected_generated = String::from("enum Letters {\n    A,\n    B,\n    C\n}");
+        assert_eq!(expected_generated, actual_generated);
+    }
+
+    #[test]
+    fn generate_event_test1() {
+        let node = parse_4_25::ParseNode {
+            node: lex_4_25::Token::Event,
+            children: vec![
+                Box::new(lex_4_25::Token::Identifier("empty".to_string()).to_leaf()),
+                Box::new(lex_4_25::Token::OpenParenthesis.to_leaf())
+            ]
+        };
+        let actual_generated = generate_event(&node);
+        let expected_generated = "event empty();";
+    }
+
+    #[test]
+    fn generate_event_test2() {
+        let node = parse_4_25::ParseNode {
+            node: lex_4_25::Token::Event,
+            children: vec![
+                Box::new(lex_4_25::Token::Identifier("Transfer".to_string()).to_leaf()),
+                Box::new(parse_4_25::ParseNode {
+                    node: lex_4_25::Token::OpenParenthesis,
+                    children: vec![
+                        Box::new(parse_4_25::ParseNode {
+                            node: lex_4_25::Token::EventParameter,
+                            children: vec![
+                                Box::new(lex_4_25::Token::Address.to_leaf()),
+                                Box::new(lex_4_25::Token::Indexed.to_leaf()),
+                                Box::new(lex_4_25::Token::Identifier("owner".to_string()).to_leaf())
+                            ]
+                        }),
+                        Box::new(parse_4_25::ParseNode {
+                            node: lex_4_25::Token::EventParameter,
+                            children: vec![
+                                Box::new(lex_4_25::Token::Address.to_leaf()),
+                                Box::new(lex_4_25::Token::Indexed.to_leaf()),
+                                Box::new(lex_4_25::Token::Identifier("recipient".to_string()).to_leaf())
+                            ]
+                        }),
+                        Box::new(parse_4_25::ParseNode {
+                            node: lex_4_25::Token::EventParameter,
+                            children: vec![
+                                Box::new(lex_4_25::Token::Uint256.to_leaf()),
+                                Box::new(lex_4_25::Token::Indexed.to_leaf()),
+                                Box::new(lex_4_25::Token::Identifier("value".to_string()).to_leaf())
+                            ]
+                        })
+                    ]
+                })
+            ]
+        };
+        let actual_generated = generate_event(&node);
+        let expected_generated = "event Transfer(\n    address indexed owner,\n    address indexed recipient,\n    uint256 indexed value\n);";
+        assert_eq!(expected_generated, actual_generated);
+    }
+
+    #[test]
+    fn generate_struct_test1() {
+        let node = parse_4_25::ParseNode {
+            node: lex_4_25::Token::Struct,
+            children: vec![
+                Box::new(lex_4_25::Token::Identifier("Value".to_string()).to_leaf()),
+                Box::new(parse_4_25::ParseNode {
+                    node: lex_4_25::Token::OpenBrace,
+                    children: vec![
+                        Box::new(parse_4_25::ParseNode {
+                            node: lex_4_25::Token::VariableDeclaration,
+                            children: vec![
+                                Box::new(lex_4_25::Token::Uint256.to_leaf()),
+                                Box::new(lex_4_25::Token::Identifier("value".to_string()).to_leaf())
+                            ]
+                        })
+                    ]
+                })
+            ]
+        };
+        let actual_generated = generate_struct(&node);
+        let expected_generated = "struct Value {\n    uint256 value;\n}";
         assert_eq!(expected_generated, actual_generated);
     }
 
