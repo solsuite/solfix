@@ -3,15 +3,15 @@ use super::parse_4_25;
 
 /*** Top Level ***/
 
-pub fn generate(tree: parse_4_25::ParseTree) -> String {
+pub fn stylize(tree: parse_4_25::ParseTree) -> String {
     let mut result = String::new();
     for child in tree.children {
         match child.node {
-            lex_4_25::Token::Pragma => result.push_str(&generate_pragma(child)),
-            lex_4_25::Token::Import => result.push_str(&generate_import(child)),
+            lex_4_25::Token::Pragma => result.push_str(&stylize_pragma(child)),
+            lex_4_25::Token::Import => result.push_str(&stylize_import(child)),
             lex_4_25::Token::Library   |
             lex_4_25::Token::Contract  |
-            lex_4_25::Token::Interface => result.push_str(&generate_contract(child)),
+            lex_4_25::Token::Interface => result.push_str(&stylize_contract(child)),
             _ => panic!("Invalid top level tree")
         }
     }
@@ -20,10 +20,11 @@ pub fn generate(tree: parse_4_25::ParseTree) -> String {
 
 /*** Pragma ***/
 
-fn generate_pragma(pragma: parse_4_25::ParseNode) -> String {
+fn stylize_pragma(pragma: parse_4_25::ParseNode) -> String {
     let mut result = String::new();
     if let lex_4_25::Token::Pragma = pragma.node {
-        result.push_str("pragma ");
+        result.push_str("pragma");
+        result.push(' ');
     }
     if pragma.children.len() >= 2 {
         if let lex_4_25::Token::Identifier(name) = &pragma.children[0].node {
@@ -50,11 +51,11 @@ fn generate_pragma(pragma: parse_4_25::ParseNode) -> String {
 
 /*** Import ***/
 
-fn generate_import(import: parse_4_25::ParseNode) -> String { String::new() }
+fn stylize_import(import: parse_4_25::ParseNode) -> String { String::new() }
 
 /*** Contract ***/
 
-fn generate_contract(contract: parse_4_25::ParseNode) -> String { 
+fn stylize_contract(contract: parse_4_25::ParseNode) -> String { 
     let mut result = String::new();
     match contract.node {
         lex_4_25::Token::Contract => result.push_str("\n\ncontract "),
@@ -72,7 +73,7 @@ fn generate_contract(contract: parse_4_25::ParseNode) -> String {
         }
         match &contract.children[1].node {
             lex_4_25::Token::OpenBrace => {
-                result.push_str(&generate_contract_part(&contract.children[1]));
+                result.push_str(&stylize_contract_part(&contract.children[1]));
             }
             _ => panic!("Invalid contract definition")
         }
@@ -86,13 +87,13 @@ fn generate_contract(contract: parse_4_25::ParseNode) -> String {
         }
         match &contract.children[1].node {
             lex_4_25::Token::Is => {
-                result.push_str(&generate_inheritance_specifier(&contract.children[1]));
+                result.push_str(&stylize_inheritance_specifier(&contract.children[1]));
             }
             _ => panic!("Invalid contract definition")
         }
         match &contract.children[2].node {
             lex_4_25::Token::OpenBrace => {
-                result.push_str(&generate_contract_part(&contract.children[2]));
+                result.push_str(&stylize_contract_part(&contract.children[2]));
             }
             _ => panic!("Invalid contract definition")
         }
@@ -102,7 +103,7 @@ fn generate_contract(contract: parse_4_25::ParseNode) -> String {
 
 /*** Inheritance Specifier ***/
 
-fn generate_inheritance_specifier(block: &parse_4_25::ParseNode) -> String {
+fn stylize_inheritance_specifier(block: &parse_4_25::ParseNode) -> String {
     let mut result = String::new();
     match block.node {
         lex_4_25::Token::Is => result.push_str("is\n"),
@@ -115,7 +116,7 @@ fn generate_inheritance_specifier(block: &parse_4_25::ParseNode) -> String {
     for i in 0..=block.children[0].children.len() - 1 {
         // FIXME Replace with result.indent()
         result.push_str("    ");
-        result.push_str(&generate_user_defined_type_name(&block.children[0].children[i]));
+        result.push_str(&stylize_user_defined_type_name(&block.children[0].children[i]));
         if i != block.children[0].children.len() - 1 {
             result.push_str(",\n");
         } else {
@@ -127,7 +128,7 @@ fn generate_inheritance_specifier(block: &parse_4_25::ParseNode) -> String {
 
 /*** Contract Part ***/
 
-fn generate_contract_part(block: &parse_4_25::ParseNode) -> String {
+fn stylize_contract_part(block: &parse_4_25::ParseNode) -> String {
     let mut result = String::new();
     match block.node {
         lex_4_25::Token::OpenBrace => result.push('{'),
@@ -135,12 +136,12 @@ fn generate_contract_part(block: &parse_4_25::ParseNode) -> String {
     }
     for child in &block.children {
         match child.node {
-            lex_4_25::Token::Enum => result.push_str(&generate_enum(&child)),
-            lex_4_25::Token::Event => result.push_str(&generate_event(&child)),
-            lex_4_25::Token::Function => result.push_str(&generate_function(&child)),
-            lex_4_25::Token::Modifier => result.push_str(&generate_modifier(&child)),
-            lex_4_25::Token::Using => result.push_str(&generate_using_for(&child)),
-            lex_4_25::Token::Struct => result.push_str(&generate_struct(&child)),
+            lex_4_25::Token::Enum => result.push_str(&stylize_enum(&child)),
+            lex_4_25::Token::Event => result.push_str(&stylize_event(&child)),
+            lex_4_25::Token::Function => result.push_str(&stylize_function(&child)),
+            lex_4_25::Token::Modifier => result.push_str(&stylize_modifier(&child)),
+            lex_4_25::Token::Using => result.push_str(&stylize_using_for(&child)),
+            lex_4_25::Token::Struct => result.push_str(&stylize_struct(&child)),
             _ => panic!("Invalid contract part")
         }
     }
@@ -150,7 +151,7 @@ fn generate_contract_part(block: &parse_4_25::ParseNode) -> String {
 
 /*** Sub-contract Structures ***/
 
-fn generate_enum(node: &parse_4_25::ParseNode) -> String { 
+fn stylize_enum(node: &parse_4_25::ParseNode) -> String { 
     let mut result = String::new();
     match node.node {
         lex_4_25::Token::Enum => result.push_str("enum"),
@@ -187,7 +188,7 @@ fn generate_enum(node: &parse_4_25::ParseNode) -> String {
     result
 }
 
-fn generate_event(node: &parse_4_25::ParseNode) -> String { 
+fn stylize_event(node: &parse_4_25::ParseNode) -> String { 
     let mut result = String::new();
     match node.node {
         lex_4_25::Token::Event => result.push_str("event"),
@@ -206,7 +207,7 @@ fn generate_event(node: &parse_4_25::ParseNode) -> String {
         for i in 0..=node.children[1].children.len() - 1 {
             result.push('\n');
             result.push_str("    ");
-            result.push_str(&generate_event_parameter(&node.children[1].children[i]));
+            result.push_str(&stylize_event_parameter(&node.children[1].children[i]));
             if i != node.children[1].children.len() - 1 {
                 result.push(',');
             } else {
@@ -219,14 +220,14 @@ fn generate_event(node: &parse_4_25::ParseNode) -> String {
     result
 }
 
-fn generate_event_parameter(node: &parse_4_25::ParseNode) -> String { 
+fn stylize_event_parameter(node: &parse_4_25::ParseNode) -> String { 
     let mut result = String::new();
     match node.node {
         lex_4_25::Token::EventParameter => (),
         _ => panic!("Invalid event parameter")
     }
     // Format the type name of the event parameter and append it to the result
-    result.push_str(&generate_type_name(&node.children[0]));
+    result.push_str(&stylize_type_name(&node.children[0]));
     if node.children.len() == 2 {
         match &node.children[1].node {
             lex_4_25::Token::Indexed => result.push_str(" indexed"),
@@ -247,22 +248,149 @@ fn generate_event_parameter(node: &parse_4_25::ParseNode) -> String {
     result
 }
 
-fn generate_function(node: &parse_4_25::ParseNode) -> String {
+fn stylize_function(node: &parse_4_25::ParseNode) -> String {
+    let mut result = String::new();
+    match node.node {
+        lex_4_25::Token::Function => result.push_str("function"),
+        _ => panic!("Invalid function definition")
+    }
+    match &node.children[0].node {
+        lex_4_25::Token::Identifier(name) => result.push_str(&name),
+        _ => panic!("Invalid function definition")
+    }
+    match &node.children[1].node {
+        lex_4_25::Token::OpenParenthesis => result.push('('),
+        _ => panic!("Invalid function definition")
+    }
+    if node.children[1].children.len() > 0 {
+        for i in 0..=node.children[1].children.len() - 1 {
+            result.push_str("            \n");
+            result.push_str(&stylize_parameter(&node.children[1].children[i]));
+            if i == node.children[1].children.len() - 1 {
+                result.push('\n');
+            } else {
+                result.push_str(",\n");
+            }
+        }
+    }
+    result.push_str("        )\n");
+    if node.children.len() >= 3 {
+        for i in 2..=node.children.len() - 1 { 
+            result.push_str("            \n");
+            match &node.children[i].node {
+                lex_4_25::Token::External => {
+                    result.push_str("            \n");
+                    result.push_str("external");
+                }
+                lex_4_25::Token::Internal => {
+                    result.push_str("            \n");
+                    result.push_str("internal"); 
+                }
+                lex_4_25::Token::Pure => {
+                    result.push_str("            \n");
+                    result.push_str("pure"); 
+                }
+                lex_4_25::Token::Constant => {
+                    result.push_str("            \n");
+                    result.push_str("constant");
+                }
+                lex_4_25::Token::View => {
+                    result.push_str("            \n");
+                    result.push_str("view");
+                }
+                lex_4_25::Token::Payable => {
+                    result.push_str("            \n");
+                    result.push_str("payable");
+                }
+                lex_4_25::Token::Identifier(..) => {
+                    result.push_str("            \n");
+                    result.push_str(&stylize_method_invocation(&node.children[i]));
+                }
+                lex_4_25::Token::Returns => break,
+                lex_4_25::Token::OpenBrace => break,
+                _ => panic!("Invalid function definition")
+            }
+        }
+    } else {
+        panic!("Invalid function definition");
+    }
+    let last = node.children.len() - 1;
+    match &node.children[last - 1].node {
+        lex_4_25::Token::Returns => {
+            result.push_str("returns");
+            match &node.children[last - 1].children[0].node {
+                lex_4_25::Token::OpenParenthesis => {
+                    result.push('(');
+                    for i in 0..=node.children[last - 1].children[0].children.len() - 1 {
+                        if i != 0 {
+                            result.push(' ');
+                        }
+                        result.push_str(&stylize_parameter(&node.children[last - 1].children[0].children[i]));
+                        if i != node.children[last - 1].children[0].children.len() - 1 {
+                            result.push_str(",");
+                        }
+                    }
+                    result.push(')');
+                }
+                _ => panic!("Invalid function definition")
+            }
+        }
+        _ => ()
+    }
+    match &node.children[last].node {
+        lex_4_25::Token::OpenBrace => result.push_str(&stylize_block(&node.children[last])),
+        lex_4_25::Token::Semicolon => result.push(';'),
+        _ => panic!("Invalid function definition")
+    }
+    result.push('\n');
+    result
+}
+
+fn stylize_block(node: &parse_4_25::ParseNode) -> String { String::new() }
+
+fn stylize_method_invocation(node: &parse_4_25::ParseNode) -> String { String::new() }
+
+fn stylize_parameter(node: &parse_4_25::ParseNode) -> String {
+    let mut result = String::new();
+    match node.node {
+        lex_4_25::Token::Parameter => (),
+        _ => panic!("Invalid parameter")
+    }
+    result.push_str(&stylize_type_name(&node.children[0]));
+    result.push(' ');
+    if node.children.len() == 2 {
+        match &node.children[1].node {
+            lex_4_25::Token::Identifier(name) => result.push_str(&name),
+            lex_4_25::Token::Memory => result.push_str("memory"),
+            lex_4_25::Token::Storage => result.push_str("storage"),
+            _ => panic!("Invalid parameter")
+        }
+    } else if node.children.len() == 3 {
+        match &node.children[1].node {
+            lex_4_25::Token::Memory => result.push_str("memory"),
+            lex_4_25::Token::Storage => result.push_str("storage"),
+            _ => panic!("Invalid parameter")
+        }
+        result.push(' ');
+        match &node.children[2].node {
+            lex_4_25::Token::Identifier(name) => result.push_str(&name),
+            _ => panic!("Invalid parameter")
+        }
+    }
+    result
+}
+
+fn stylize_modifier(node: &parse_4_25::ParseNode) -> String {
     let mut result = String::new();
     result
 }
 
-fn generate_modifier(node: &parse_4_25::ParseNode) -> String {
+fn stylize_using_for(node: &parse_4_25::ParseNode) -> String {
     let mut result = String::new();
     result
 }
 
-fn generate_using_for(node: &parse_4_25::ParseNode) -> String {
-    let mut result = String::new();
-    result
-}
-
-fn generate_struct(node: &parse_4_25::ParseNode) -> String {
+fn stylize_struct(node: &parse_4_25::ParseNode) -> String {
     let mut result = String::new();
     match node.node {
         lex_4_25::Token::Struct => result.push_str("struct"),
@@ -281,7 +409,7 @@ fn generate_struct(node: &parse_4_25::ParseNode) -> String {
     for i in 0..=node.children[1].children.len() - 1 {
         result.push('\n');
         result.push_str("    ");
-        result.push_str(&generate_variable_declaration(&node.children[1].children[i]));
+        result.push_str(&stylize_variable_declaration(&node.children[1].children[i]));
         result.push(';');
         if i == node.children[1].children.len() - 1 {
             result.push('\n');
@@ -291,13 +419,13 @@ fn generate_struct(node: &parse_4_25::ParseNode) -> String {
     result
 }
 
-fn generate_variable_declaration(node: &parse_4_25::ParseNode) -> String {
+fn stylize_variable_declaration(node: &parse_4_25::ParseNode) -> String {
     let mut result = String::new();
     match node.node {
         lex_4_25::Token::VariableDeclaration => (),
         _ => panic!("Invalid variable declaration")
     }
-    result.push_str(&generate_type_name(&node.children[0])); 
+    result.push_str(&stylize_type_name(&node.children[0])); 
     result.push(' ');
     if node.children.len() == 2 {
         match &node.children[1].node {
@@ -323,15 +451,15 @@ fn generate_variable_declaration(node: &parse_4_25::ParseNode) -> String {
 
 /*** Types ***/
 
-fn generate_type_name(type_name: &parse_4_25::ParseNode) -> String { 
+fn stylize_type_name(type_name: &parse_4_25::ParseNode) -> String { 
     return match type_name.node {
-        lex_4_25::Token::Identifier(..) => generate_user_defined_type_name(type_name),
-        lex_4_25::Token::Function => generate_function_type(type_name),
-        lex_4_25::Token::Mapping => generate_mapping(type_name),
-        lex_4_25::Token::OpenBracket => generate_array_type_name(type_name),
+        lex_4_25::Token::Identifier(..) => stylize_user_defined_type_name(type_name),
+        lex_4_25::Token::Function => stylize_function_type(type_name),
+        lex_4_25::Token::Mapping => stylize_mapping(type_name),
+        lex_4_25::Token::OpenBracket => stylize_array_type_name(type_name),
         ref elementary => {
             if elementary.is_elementary_type() {
-                return generate_elementary_type(type_name);
+                return stylize_elementary_type(type_name);
             } else {
                 panic!("Invalid type name");
             }
@@ -340,7 +468,7 @@ fn generate_type_name(type_name: &parse_4_25::ParseNode) -> String {
     }
 }
 
-fn generate_user_defined_type_name(type_name: &parse_4_25::ParseNode) -> String {
+fn stylize_user_defined_type_name(type_name: &parse_4_25::ParseNode) -> String {
     let mut result = String::new();
     match type_name.node {
         lex_4_25::Token::UserDefinedTypeName => (),
@@ -358,22 +486,22 @@ fn generate_user_defined_type_name(type_name: &parse_4_25::ParseNode) -> String 
     result
 }
 
-fn generate_array_type_name(function_type: &parse_4_25::ParseNode) -> String {
+fn stylize_array_type_name(function_type: &parse_4_25::ParseNode) -> String {
     let mut result = String::new();
     result
 }
 
-fn generate_function_type(function_type: &parse_4_25::ParseNode) -> String {
+fn stylize_function_type(function_type: &parse_4_25::ParseNode) -> String {
     let mut result = String::new();
     result
 }
 
-fn generate_mapping(function_type: &parse_4_25::ParseNode) -> String {
+fn stylize_mapping(function_type: &parse_4_25::ParseNode) -> String {
     let mut result = String::new();
     result
 }
 
-fn generate_elementary_type(elementary_type: &parse_4_25::ParseNode) -> String {
+fn stylize_elementary_type(elementary_type: &parse_4_25::ParseNode) -> String {
     return match elementary_type.node {
         lex_4_25::Token::Address => "address",
         lex_4_25::Token::Bool => "bool",
@@ -490,7 +618,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn generate_pragma_test1() {
+    fn stylize_pragma_test1() {
         let tree = parse_4_25::ParseTree {
             children: vec![
                 parse_4_25::ParseNode {
@@ -502,13 +630,13 @@ mod tests {
                 }
             ]
         };
-        let actual_generated = generate(tree);
-        let expected_generated = "pragma solidity 0.4.25;";
-        assert_eq!(expected_generated, actual_generated);
+        let actual_stylized = stylize(tree);
+        let expected_stylized = "pragma solidity 0.4.25;";
+        assert_eq!(expected_stylized, actual_stylized);
     }
 
     #[test]
-    fn generate_inheritance_specifier_test1() {
+    fn stylize_inheritance_specifier_test1() {
         let node = parse_4_25::ParseNode {
             node: lex_4_25::Token::Is,
             children: vec![
@@ -525,13 +653,13 @@ mod tests {
                 })
             ]
         };
-        let actual_generated = generate_inheritance_specifier(&node);
-        let expected_generated = "is\n    A\n";
-        assert_eq!(actual_generated, expected_generated);
+        let actual_stylized = stylize_inheritance_specifier(&node);
+        let expected_stylized = "is\n    A\n";
+        assert_eq!(actual_stylized, expected_stylized);
     }
 
     #[test]
-    fn generate_inheritance_specifier_test2() {
+    fn stylize_inheritance_specifier_test2() {
         let node = parse_4_25::ParseNode {
             node: lex_4_25::Token::Is,
             children: vec![
@@ -555,13 +683,13 @@ mod tests {
                 })
             ]
         };
-        let actual_generated = generate_inheritance_specifier(&node);
-        let expected_generated = "is\n    A,\n    Bat.Car\n";
-        assert_eq!(actual_generated, expected_generated);
+        let actual_stylized = stylize_inheritance_specifier(&node);
+        let expected_stylized = "is\n    A,\n    Bat.Car\n";
+        assert_eq!(actual_stylized, expected_stylized);
     }
 
     #[test]
-    fn generate_inheritance_specifier_test3() {
+    fn stylize_inheritance_specifier_test3() {
         let node = parse_4_25::ParseNode {
             node: lex_4_25::Token::Is,
             children: vec![
@@ -593,13 +721,13 @@ mod tests {
                 })
             ]
         };
-        let actual_generated = generate_inheritance_specifier(&node);
-        let expected_generated = "is\n    A,\n    Bat.Car,\n    foo.bar.baz\n";
-        assert_eq!(actual_generated, expected_generated);
+        let actual_stylized = stylize_inheritance_specifier(&node);
+        let expected_stylized = "is\n    A,\n    Bat.Car,\n    foo.bar.baz\n";
+        assert_eq!(actual_stylized, expected_stylized);
     }
 
     #[test]
-    fn generate_enum_test1() {
+    fn stylize_enum_test1() {
         let node = parse_4_25::ParseNode {
             node: lex_4_25::Token::Enum,
             children: vec![
@@ -607,13 +735,13 @@ mod tests {
                 Box::new(lex_4_25::Token::OpenBrace.to_leaf())
             ]
         };
-        let actual_generated = generate_enum(&node);
-        let expected_generated = String::from("enum empty {}");
-        assert_eq!(expected_generated, actual_generated);
+        let actual_stylized = stylize_enum(&node);
+        let expected_stylized = String::from("enum empty {}");
+        assert_eq!(expected_stylized, actual_stylized);
     }
 
     #[test]
-    fn generate_enum_test2() {
+    fn stylize_enum_test2() {
         let node = parse_4_25::ParseNode {
             node: lex_4_25::Token::Enum,
             children: vec![
@@ -628,13 +756,13 @@ mod tests {
                 })
             ]
         };
-        let actual_generated = generate_enum(&node);
-        let expected_generated = String::from("enum Letters {\n    A,\n    B,\n    C\n}");
-        assert_eq!(expected_generated, actual_generated);
+        let actual_stylized = stylize_enum(&node);
+        let expected_stylized = String::from("enum Letters {\n    A,\n    B,\n    C\n}");
+        assert_eq!(expected_stylized, actual_stylized);
     }
 
     #[test]
-    fn generate_event_test1() {
+    fn stylize_event_test1() {
         let node = parse_4_25::ParseNode {
             node: lex_4_25::Token::Event,
             children: vec![
@@ -642,12 +770,12 @@ mod tests {
                 Box::new(lex_4_25::Token::OpenParenthesis.to_leaf())
             ]
         };
-        let actual_generated = generate_event(&node);
-        let expected_generated = "event empty();";
+        let actual_stylized = stylize_event(&node);
+        let expected_stylized = "event empty();";
     }
 
     #[test]
-    fn generate_event_test2() {
+    fn stylize_event_test2() {
         let node = parse_4_25::ParseNode {
             node: lex_4_25::Token::Event,
             children: vec![
@@ -683,13 +811,13 @@ mod tests {
                 })
             ]
         };
-        let actual_generated = generate_event(&node);
-        let expected_generated = "event Transfer(\n    address indexed owner,\n    address indexed recipient,\n    uint256 indexed value\n);";
-        assert_eq!(expected_generated, actual_generated);
+        let actual_stylized = stylize_event(&node);
+        let expected_stylized = "event Transfer(\n    address indexed owner,\n    address indexed recipient,\n    uint256 indexed value\n);";
+        assert_eq!(expected_stylized, actual_stylized);
     }
 
     #[test]
-    fn generate_struct_test1() {
+    fn stylize_struct_test1() {
         let node = parse_4_25::ParseNode {
             node: lex_4_25::Token::Struct,
             children: vec![
@@ -708,26 +836,26 @@ mod tests {
                 })
             ]
         };
-        let actual_generated = generate_struct(&node);
-        let expected_generated = "struct Value {\n    uint256 value;\n}";
-        assert_eq!(expected_generated, actual_generated);
+        let actual_stylized = stylize_struct(&node);
+        let expected_stylized = "struct Value {\n    uint256 value;\n}";
+        assert_eq!(expected_stylized, actual_stylized);
     }
 
     #[test]
-    fn generate_user_defined_type_name_test1() {
+    fn stylize_user_defined_type_name_test1() {
         let node = parse_4_25::ParseNode {
             node: lex_4_25::Token::UserDefinedTypeName,
             children: vec![
                 Box::new(lex_4_25::Token::Identifier("A".to_string()).to_leaf())
             ]
         };
-        let actual_generated = generate_user_defined_type_name(&node);
-        let expected_generated = String::from("A");
-        assert_eq!(expected_generated, actual_generated);
+        let actual_stylized = stylize_user_defined_type_name(&node);
+        let expected_stylized = String::from("A");
+        assert_eq!(expected_stylized, actual_stylized);
     }
 
     #[test]
-    fn generate_user_defined_type_name_test2() {
+    fn stylize_user_defined_type_name_test2() {
         let node = parse_4_25::ParseNode {
             node: lex_4_25::Token::UserDefinedTypeName,
             children: vec![
@@ -735,48 +863,48 @@ mod tests {
                 Box::new(lex_4_25::Token::Identifier("b".to_string()).to_leaf())
             ]
         };
-        let actual_generated = generate_user_defined_type_name(&node);
-        let expected_generated = String::from("A.b");
-        assert_eq!(expected_generated, actual_generated);
+        let actual_stylized = stylize_user_defined_type_name(&node);
+        let expected_stylized = String::from("A.b");
+        assert_eq!(expected_stylized, actual_stylized);
     }
 
     #[test]
-    fn generate_elementary_type_test1() {
+    fn stylize_elementary_type_test1() {
         let node = lex_4_25::Token::Address.to_leaf();
-        let actual_generated = generate_elementary_type(&node);
-        let expected_generated = "address";
-        assert_eq!(expected_generated, actual_generated);
+        let actual_stylized = stylize_elementary_type(&node);
+        let expected_stylized = "address";
+        assert_eq!(expected_stylized, actual_stylized);
     }
 
     #[test]
-    fn generate_elementary_type_test2() {
+    fn stylize_elementary_type_test2() {
         let node = lex_4_25::Token::Bool.to_leaf();
-        let actual_generated = generate_elementary_type(&node);
-        let expected_generated = "bool";
-        assert_eq!(expected_generated, actual_generated);
+        let actual_stylized = stylize_elementary_type(&node);
+        let expected_stylized = "bool";
+        assert_eq!(expected_stylized, actual_stylized);
     }
 
     #[test]
-    fn generate_elementary_type_test3() {
+    fn stylize_elementary_type_test3() {
         let node = lex_4_25::Token::Byte.to_leaf();
-        let actual_generated = generate_elementary_type(&node);
-        let expected_generated = "byte";
-        assert_eq!(expected_generated, actual_generated);
+        let actual_stylized = stylize_elementary_type(&node);
+        let expected_stylized = "byte";
+        assert_eq!(expected_stylized, actual_stylized);
     }
 
     #[test]
-    fn generate_elementary_type_test4() {
+    fn stylize_elementary_type_test4() {
         let node = lex_4_25::Token::Bytes.to_leaf();
-        let actual_generated = generate_elementary_type(&node);
-        let expected_generated = "bytes";
-        assert_eq!(expected_generated, actual_generated);
+        let actual_stylized = stylize_elementary_type(&node);
+        let expected_stylized = "bytes";
+        assert_eq!(expected_stylized, actual_stylized);
     }
 
     #[test]
-    fn generate_elementary_type_test5() {
+    fn stylize_elementary_type_test5() {
         let node = lex_4_25::Token::Bytes1.to_leaf();
-        let actual_generated = generate_elementary_type(&node);
-        let expected_generated = "bytes1";
-        assert_eq!(expected_generated, actual_generated);
+        let actual_stylized = stylize_elementary_type(&node);
+        let expected_stylized = "bytes1";
+        assert_eq!(expected_stylized, actual_stylized);
     }
 }

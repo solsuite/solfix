@@ -475,6 +475,21 @@ fn parse_parameter_list(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
         lex_4_25::Token::OpenParenthesis => (),
         _ => panic!("Invalid parameter list")
     }
+    let mut stop = false;
+    while !stop {
+        /*
+        match lex_4_25::peek_token(chars, cur) {
+            lex_4_25::Token::CloseParenthesis => stop = true,
+            _ => result.children.push(Box::new(parse_parameter(chars, cur)))
+        }
+        */
+        if !stop {
+            match lex_4_25::peek_token(chars, cur) {
+                lex_4_25::Token::Comma => (),
+                _ => stop = true
+            }
+        }
+    }
     match lex_4_25::next_token(chars, cur) {
         lex_4_25::Token::CloseParenthesis => (),
         _ => panic!("Invalid parameter list")
@@ -482,7 +497,20 @@ fn parse_parameter_list(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
     result
 }
 
-fn parse_parameter(chars: &Vec<char>, cur: &mut usize) -> ParseNode { ParseNode::empty() }
+fn parse_parameter(chars: &Vec<char>, cur: &mut usize) -> ParseNode {
+    let mut result = lex_4_25::Token::Parameter.to_leaf();
+    result.children.push(Box::new(parse_type_name(chars, cur)));
+    match lex_4_25::peek_token(chars, cur) {
+        lex_4_25::Token::Memory  |
+        lex_4_25::Token::Storage => result.add_child(lex_4_25::next_token(chars, cur)),
+        _ => ()
+    }
+    match lex_4_25::peek_token(chars, cur) {
+        lex_4_25::Token::Identifier(..) => result.add_child(lex_4_25::next_token(chars, cur)),
+        _ => ()
+    }
+    result
+}
 
 fn parse_block(chars: &Vec<char>, cur: &mut usize) -> ParseNode { 
     let mut result = lex_4_25::Token::OpenBrace.to_leaf();
