@@ -1,0 +1,9 @@
+git status /git diff - shows any changes made to local files relative to repo
+git pull - pulls latest changes to repo (by branch)
+git checkout -b '...' - Creates a separate branch
+git add . - Prepares changes to be made to repo, LOCALLY (for all files) (draft -> final copy)
+git commit -m "[Message]" - Creates new version of file system based on what was 'git add'ed after the previous commit
+git push origin 'Branch' - Pushes commit to Github
+
+cargo test = Runs all tests
+pwd = print working director
