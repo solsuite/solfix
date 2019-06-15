@@ -4,6 +4,7 @@ extern crate solfix;
 mod parse_tests {
     use solfix::lex_4_25;
     use solfix::parse_4_25::{ parse, ParseNode, ParseTree };
+    use solfix::utils::test_utils::parser::*;
 
     /*** Pragma ***/
 
@@ -15,13 +16,13 @@ mod parse_tests {
                 ParseNode {
                     node: lex_4_25::Token::Pragma,
                     children: vec![
-                        Box::new(lex_4_25::Token::Identifier("solidity".to_string()).to_leaf()),
-                        Box::new(lex_4_25::Token::Version("0.4.25".to_string()).to_leaf())
+                        as_leaf(lex_4_25::to_identifier("solidity")),
+                        as_leaf(lex_4_25::to_version("0.4.25"))
                     ]
                 }
             ]
         };
-        assert_eq!(expected_tree, actual_tree);
+        expect_eq(expected_tree, actual_tree);
     }
 
     #[test]
@@ -32,14 +33,14 @@ mod parse_tests {
                 ParseNode {
                     node: lex_4_25::Token::Pragma,
                     children: vec![
-                        Box::new(lex_4_25::Token::Identifier("solidity".to_string()).to_leaf()),
-                        Box::new(lex_4_25::Token::BitwiseXor.to_leaf()),
-                        Box::new(lex_4_25::Token::Version("0.4.25".to_string()).to_leaf())
+                        as_leaf(lex_4_25::to_identifier("solidity")),
+                        as_leaf(lex_4_25::Token::BitwiseXor),
+                        as_leaf(lex_4_25::to_version("0.4.25"))
                     ]
                 }
             ]
         };
-        assert_eq!(expected_tree, actual_tree);
+        expect_eq(expected_tree, actual_tree);
     }
 
     /*** Contract ***/
@@ -52,13 +53,13 @@ mod parse_tests {
                 ParseNode {
                     node: lex_4_25::Token::Contract,
                     children: vec![
-                        Box::new(lex_4_25::Token::Identifier("A".to_string()).to_leaf()),
-                        Box::new(lex_4_25::Token::OpenBrace.to_leaf())
+                        as_leaf(lex_4_25::to_identifier("A")),
+                        as_leaf(lex_4_25::Token::OpenBrace)
                     ]
                 }
             ]
         };
-        assert_eq!(expected_tree, actual_tree);
+        expect_eq(expected_tree, actual_tree);
     }
 
     #[test]
@@ -69,29 +70,29 @@ mod parse_tests {
                 ParseNode {
                     node: lex_4_25::Token::Contract,
                     children: vec![
-                        Box::new(lex_4_25::Token::Identifier("B".to_string()).to_leaf()),
-                        Box::new(ParseNode {
-                            node: lex_4_25::Token::Is,
-                            children: vec![
-                                Box::new(ParseNode {
-                                    node: lex_4_25::Token::OpenParenthesis,
-                                    children: vec![
-                                        Box::new(ParseNode {
-                                            node: lex_4_25::Token::UserDefinedTypeName,
-                                            children: vec![
-                                                Box::new(lex_4_25::Token::Identifier("A".to_string()).to_leaf())
+                        as_leaf(lex_4_25::to_identifier("B")),
+                        as_node(
+                            lex_4_25::Token::Is,
+                            vec![
+                                as_node(
+                                    lex_4_25::Token::OpenParenthesis,
+                                    vec![
+                                        as_node(
+                                            lex_4_25::Token::UserDefinedTypeName,
+                                            vec![
+                                                as_leaf(lex_4_25::to_identifier("A"))
                                             ]
-                                        })
+                                        )
                                     ]
-                                })
+                                )
                             ]
-                        }),
-                        Box::new(lex_4_25::Token::OpenBrace.to_leaf())
+                        ),
+                        as_leaf(lex_4_25::Token::OpenBrace)
                     ]
                 }
             ]
         };
-        assert_eq!(expected_tree, actual_tree);
+        expect_eq(expected_tree, actual_tree);
     }
 
     #[test]
@@ -102,24 +103,24 @@ mod parse_tests {
                 ParseNode {
                     node: lex_4_25::Token::Contract,
                     children: vec![
-                        Box::new(lex_4_25::Token::Identifier("Enum".to_string()).to_leaf()),
-                        Box::new(ParseNode {
-                            node: lex_4_25::Token::OpenBrace,
-                            children: vec![
-                                Box::new(ParseNode {
-                                    node: lex_4_25::Token::Enum,
-                                    children: vec![
-                                        Box::new(lex_4_25::Token::Identifier("Foo".to_string()).to_leaf()),
-                                        Box::new(lex_4_25::Token::OpenBrace.to_leaf())
+                        as_leaf(lex_4_25::to_identifier("Enum")),
+                        as_node(
+                            lex_4_25::Token::OpenBrace,
+                            vec![
+                                as_node(
+                                    lex_4_25::Token::Enum,
+                                    vec![
+                                        as_leaf(lex_4_25::to_identifier("Foo")),
+                                        as_leaf(lex_4_25::Token::OpenBrace)
                                     ]
-                                })
+                                )
                             ]
-                        })
+                        )
                     ]
                 }
             ]
         };
-        assert_eq!(expected_tree, actual_tree);
+        expect_eq(expected_tree, actual_tree);
     }
 
     #[test]
@@ -130,30 +131,30 @@ mod parse_tests {
                 ParseNode {
                     node: lex_4_25::Token::Contract,
                     children: vec![
-                        Box::new(lex_4_25::Token::Identifier("Enum".to_string()).to_leaf()),
-                        Box::new(ParseNode {
-                            node: lex_4_25::Token::OpenBrace,
-                            children: vec![
-                                Box::new(ParseNode {
-                                    node: lex_4_25::Token::Enum,
-                                    children: vec![
-                                        Box::new(lex_4_25::Token::Identifier("Foo".to_string()).to_leaf()),
-                                        Box::new(ParseNode {
-                                            node: lex_4_25::Token::OpenBrace,
-                                            children: vec![
-                                                Box::new(lex_4_25::Token::Identifier("Bar".to_string()).to_leaf()),
-                                                Box::new(lex_4_25::Token::Identifier("Baz".to_string()).to_leaf())
+                        as_leaf(lex_4_25::to_identifier("Enum")),
+                        as_node(
+                            lex_4_25::Token::OpenBrace,
+                            vec![
+                                as_node(
+                                    lex_4_25::Token::Enum,
+                                    vec![
+                                        as_leaf(lex_4_25::to_identifier("Foo")),
+                                        as_node(
+                                            lex_4_25::Token::OpenBrace,
+                                            vec![
+                                                as_leaf(lex_4_25::to_identifier("Bar")),
+                                                as_leaf(lex_4_25::to_identifier("Baz"))
                                             ]
-                                        })
+                                        )
                                     ]
-                                })
+                                )
                             ]
-                        })
+                        )
                     ]
                 }
             ]
         };
-        assert_eq!(expected_tree, actual_tree);
+        expect_eq(expected_tree, actual_tree);
     }
 
     #[test]
@@ -164,24 +165,24 @@ mod parse_tests {
                 ParseNode {
                     node: lex_4_25::Token::Contract,
                     children: vec![
-                        Box::new(lex_4_25::Token::Identifier("Event".to_string()).to_leaf()),
-                        Box::new(ParseNode {
-                            node: lex_4_25::Token::OpenBrace,
-                            children: vec![
-                                Box::new(ParseNode {
-                                    node: lex_4_25::Token::Event,
-                                    children: vec![
-                                        Box::new(lex_4_25::Token::Identifier("emptyEvent".to_string()).to_leaf()),
-                                        Box::new(lex_4_25::Token::OpenParenthesis.to_leaf())
+                        as_leaf(lex_4_25::to_identifier("Event")),
+                        as_node(
+                            lex_4_25::Token::OpenBrace,
+                            vec![
+                                as_node(
+                                    lex_4_25::Token::Event,
+                                    vec![
+                                        as_leaf(lex_4_25::to_identifier("emptyEvent")),
+                                        as_leaf(lex_4_25::Token::OpenParenthesis)
                                     ]
-                                }) 
+                                ) 
                             ]
-                        })
+                        )
                     ]
                 }
             ]
         };
-        assert_eq!(expected_tree, actual_tree);
+        expect_eq(expected_tree, actual_tree);
     }
 
     #[test]
@@ -192,52 +193,52 @@ mod parse_tests {
                 ParseNode {
                     node: lex_4_25::Token::Contract,
                     children: vec![
-                        Box::new(lex_4_25::Token::Identifier("Event".to_string()).to_leaf()),
-                        Box::new(ParseNode {
-                            node: lex_4_25::Token::OpenBrace,
-                            children: vec![
-                                Box::new(ParseNode {
-                                    node: lex_4_25::Token::Event,
-                                    children: vec![
-                                        Box::new(lex_4_25::Token::Identifier("Transfer".to_string()).to_leaf()),
-                                        Box::new(ParseNode {
-                                            node: lex_4_25::Token::OpenParenthesis,
-                                            children: vec![
-                                                Box::new(ParseNode {
-                                                    node: lex_4_25::Token::EventParameter,
-                                                    children: vec![
-                                                        Box::new(lex_4_25::Token::Address.to_leaf()),
-                                                        Box::new(lex_4_25::Token::Indexed.to_leaf()),
-                                                        Box::new(lex_4_25::Token::Identifier("from".to_string()).to_leaf())
+                        as_leaf(lex_4_25::to_identifier("Event")),
+                        as_node(
+                            lex_4_25::Token::OpenBrace,
+                            vec![
+                                as_node(
+                                    lex_4_25::Token::Event,
+                                    vec![
+                                        as_leaf(lex_4_25::to_identifier("Transfer")),
+                                        as_node(
+                                            lex_4_25::Token::OpenParenthesis,
+                                            vec![
+                                                as_node(
+                                                    lex_4_25::Token::EventParameter,
+                                                    vec![
+                                                        as_leaf(lex_4_25::Token::Address),
+                                                        as_leaf(lex_4_25::Token::Indexed),
+                                                        as_leaf(lex_4_25::to_identifier("from"))
                                                     ]
-                                                }),
-                                                Box::new(ParseNode {
-                                                    node: lex_4_25::Token::EventParameter,
-                                                    children: vec![
-                                                        Box::new(lex_4_25::Token::Address.to_leaf()),
-                                                        Box::new(lex_4_25::Token::Indexed.to_leaf()),
-                                                        Box::new(lex_4_25::Token::Identifier("to".to_string()).to_leaf())
+                                                ),
+                                                as_node(
+                                                    lex_4_25::Token::EventParameter,
+                                                    vec![
+                                                        as_leaf(lex_4_25::Token::Address),
+                                                        as_leaf(lex_4_25::Token::Indexed),
+                                                        as_leaf(lex_4_25::to_identifier("to"))
                                                     ]
-                                                }),
-                                                Box::new(ParseNode {
-                                                    node: lex_4_25::Token::EventParameter,
-                                                    children: vec![
-                                                        Box::new(lex_4_25::Token::Uint256.to_leaf()),
-                                                        Box::new(lex_4_25::Token::Indexed.to_leaf()),
-                                                        Box::new(lex_4_25::Token::Identifier("value".to_string()).to_leaf())
+                                                ),
+                                                as_node(
+                                                    lex_4_25::Token::EventParameter,
+                                                    vec![
+                                                        as_leaf(lex_4_25::Token::Uint256),
+                                                        as_leaf(lex_4_25::Token::Indexed),
+                                                        as_leaf(lex_4_25::to_identifier("value"))
                                                     ]
-                                                })
+                                                )
                                             ]
-                                        })
+                                        )
                                     ]
-                                })
+                                )
                             ]
-                        })
+                        )
                     ]
                 }
             ]
         };
-        assert_eq!(expected_tree, actual_tree);
+        expect_eq(expected_tree, actual_tree);
     }
 
     #[test]
@@ -248,27 +249,27 @@ mod parse_tests {
                 ParseNode {
                     node: lex_4_25::Token::Contract,
                     children: vec![
-                        Box::new(lex_4_25::Token::Identifier("Function".to_string()).to_leaf()),
-                        Box::new(ParseNode {
-                            node: lex_4_25::Token::OpenBrace,
-                            children: vec![
-                                Box::new(ParseNode {
-                                    node: lex_4_25::Token::Function,
-                                    children: vec![
-                                        Box::new(lex_4_25::Token::Identifier("doNothing".to_string()).to_leaf()),
-                                        Box::new(lex_4_25::Token::OpenParenthesis.to_leaf()),
-                                        Box::new(lex_4_25::Token::Internal.to_leaf()),
-                                        Box::new(lex_4_25::Token::Pure.to_leaf()),
-                                        Box::new(lex_4_25::Token::OpenBrace.to_leaf())
+                        as_leaf(lex_4_25::to_identifier("Function")),
+                        as_node(
+                            lex_4_25::Token::OpenBrace,
+                            vec![
+                                as_node(
+                                    lex_4_25::Token::Function,
+                                    vec![
+                                        as_leaf(lex_4_25::to_identifier("doNothing")),
+                                        as_leaf(lex_4_25::Token::OpenParenthesis),
+                                        as_leaf(lex_4_25::Token::Internal),
+                                        as_leaf(lex_4_25::Token::Pure),
+                                        as_leaf(lex_4_25::Token::OpenBrace)
                                     ]
-                                })
+                                )
                             ]
-                        })
+                        )
                     ]
                 }
             ]
         };
-        assert_eq!(expected_tree, actual_tree);
+        expect_eq(expected_tree, actual_tree);
     }
 
     #[test]
@@ -279,53 +280,53 @@ mod parse_tests {
                 ParseNode {
                     node: lex_4_25::Token::Contract,
                     children: vec![
-                        Box::new(lex_4_25::Token::Identifier("Function".to_string()).to_leaf()),
-                        Box::new(ParseNode {
-                            node: lex_4_25::Token::OpenBrace,
-                            children: vec![
-                                Box::new(ParseNode {
-                                    node: lex_4_25::Token::Function,
-                                    children: vec![
-                                        Box::new(lex_4_25::Token::Identifier("emitEvent".to_string()).to_leaf()),
-                                        Box::new(lex_4_25::Token::OpenParenthesis.to_leaf()),
-                                        Box::new(lex_4_25::Token::Internal.to_leaf()),
-                                        Box::new(ParseNode {
-                                            node: lex_4_25::Token::OpenBrace,
-                                            children: vec![
-                                                Box::new(ParseNode {
-                                                    node: lex_4_25::Token::Emit,
-                                                    children: vec![
-                                                        Box::new(ParseNode {
-                                                            node: lex_4_25::Token::OpenParenthesis,
-                                                            children: vec![
-                                                                Box::new(lex_4_25::Token::Identifier("someEvent".to_string()).to_leaf()),
-                                                                Box::new(ParseNode {
-                                                                    node: lex_4_25::Token::OpenParenthesis,
-                                                                    children: vec![
-                                                                        Box::new(ParseNode {
-                                                                            node: lex_4_25::Token::Plus,
-                                                                            children: vec![
-                                                                                Box::new(lex_4_25::Token::DecimalNumber("1".to_string()).to_leaf()),
-                                                                                Box::new(lex_4_25::Token::DecimalNumber("1".to_string()).to_leaf())
+                        as_leaf(lex_4_25::to_identifier("Function")),
+                        as_node(
+                            lex_4_25::Token::OpenBrace,
+                            vec![
+                                as_node(
+                                    lex_4_25::Token::Function,
+                                    vec![
+                                        as_leaf(lex_4_25::to_identifier("emitEvent")),
+                                        as_leaf(lex_4_25::Token::OpenParenthesis),
+                                        as_leaf(lex_4_25::Token::Internal),
+                                        as_node(
+                                            lex_4_25::Token::OpenBrace,
+                                            vec![
+                                                as_node(
+                                                    lex_4_25::Token::Emit,
+                                                    vec![
+                                                        as_node(
+                                                            lex_4_25::Token::OpenParenthesis,
+                                                            vec![
+                                                                as_leaf(lex_4_25::to_identifier("someEvent")),
+                                                                as_node(
+                                                                    lex_4_25::Token::OpenParenthesis,
+                                                                    vec![
+                                                                        as_node(
+                                                                            lex_4_25::Token::Plus,
+                                                                            vec![
+                                                                                as_leaf(lex_4_25::to_decimal_number("1")),
+                                                                                as_leaf(lex_4_25::to_decimal_number("1"))
                                                                             ]
-                                                                        })
+                                                                        )
                                                                     ]
-                                                                })
+                                                                )
                                                             ]
-                                                        })
+                                                        )
                                                     ]
-                                                }),
+                                                ),
                                             ]
-                                        })
+                                        )
                                     ]
-                                })
+                                )
                             ]
-                        })
+                        )
                     ]
                 }
             ]
         };
-        assert_eq!(expected_tree, actual_tree);
+        expect_eq(expected_tree, actual_tree);
     }
 
     #[test]
@@ -336,27 +337,27 @@ mod parse_tests {
                 ParseNode {
                     node: lex_4_25::Token::Contract,
                     children: vec![
-                        Box::new(lex_4_25::Token::Identifier("Modifier".to_string()).to_leaf()),
-                        Box::new(ParseNode {
-                            node: lex_4_25::Token::OpenBrace,
-                            children: vec![
-                                Box::new(ParseNode {
-                                    node: lex_4_25::Token::Modifier,
-                                    children: vec![
-                                        Box::new(lex_4_25::Token::Identifier("doNothing".to_string()).to_leaf()),
-                                        Box::new(ParseNode {
-                                            node: lex_4_25::Token::OpenBrace,
-                                            children: vec![ Box::new(lex_4_25::Token::Placeholder.to_leaf()) ]
-                                        })
+                        as_leaf(lex_4_25::to_identifier("Modifier")),
+                        as_node(
+                            lex_4_25::Token::OpenBrace,
+                            vec![
+                                as_node(
+                                    lex_4_25::Token::Modifier,
+                                    vec![
+                                        as_leaf(lex_4_25::to_identifier("doNothing")),
+                                        as_node(
+                                            lex_4_25::Token::OpenBrace,
+                                            vec![ as_leaf(lex_4_25::Token::Placeholder) ]
+                                        )
                                     ]
-                                })
+                                )
                             ]
-                        })
+                        )
                     ]
                 }
             ]
         };
-        assert_eq!(expected_tree, actual_tree);
+        expect_eq(expected_tree, actual_tree);
     }
 
     #[test]
@@ -367,24 +368,24 @@ mod parse_tests {
                 ParseNode {
                     node: lex_4_25::Token::Contract,
                     children: vec![
-                        Box::new(lex_4_25::Token::Identifier("Using".to_string()).to_leaf()),
-                        Box::new(ParseNode {
-                            node: lex_4_25::Token::OpenBrace,
-                            children: vec![
-                                Box::new(ParseNode {
-                                    node: lex_4_25::Token::Using,
-                                    children: vec![
-                                        Box::new(lex_4_25::Token::Identifier("SafeMath".to_string()).to_leaf()),
-                                        Box::new(lex_4_25::Token::Uint256.to_leaf())
+                        as_leaf(lex_4_25::to_identifier("Using")),
+                        as_node(
+                            lex_4_25::Token::OpenBrace,
+                            vec![
+                                as_node(
+                                    lex_4_25::Token::Using,
+                                    vec![
+                                        as_leaf(lex_4_25::to_identifier("SafeMath")),
+                                        as_leaf(lex_4_25::Token::Uint256)
                                     ]
-                                })
+                                )
                             ]
-                        })
+                        )
                     ]
                 }
             ]
         };
-        assert_eq!(expected_tree, actual_tree);
+        expect_eq(expected_tree, actual_tree);
     }
 
     #[test]
@@ -395,23 +396,23 @@ mod parse_tests {
                 ParseNode {
                     node: lex_4_25::Token::Contract,
                     children: vec![
-                        Box::new(lex_4_25::Token::Identifier("Using".to_string()).to_leaf()),
-                        Box::new(ParseNode {
-                            node: lex_4_25::Token::OpenBrace,
-                            children: vec![
-                                Box::new(ParseNode {
-                                    node: lex_4_25::Token::Using,
-                                    children: vec![
-                                        Box::new(lex_4_25::Token::Identifier("SafeMath".to_string()).to_leaf()),
-                                        Box::new(lex_4_25::Token::Multiply.to_leaf())
+                        as_leaf(lex_4_25::to_identifier("Using")),
+                        as_node(
+                            lex_4_25::Token::OpenBrace,
+                            vec![
+                                as_node(
+                                    lex_4_25::Token::Using,
+                                    vec![
+                                        as_leaf(lex_4_25::to_identifier("SafeMath")),
+                                        as_leaf(lex_4_25::Token::Multiply)
                                     ]
-                                })
+                                )
                             ]
-                        })
+                        )
                     ]
                 }
             ]
         };
-        assert_eq!(expected_tree, actual_tree);
+        expect_eq(expected_tree, actual_tree);
     }
 }

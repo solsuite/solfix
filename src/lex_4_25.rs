@@ -493,6 +493,10 @@ pub fn to_identifier(string: &str) -> Token {
     return Token::Identifier(string.to_string());
 }
 
+pub fn to_version(string: &str) -> Token {
+    return Token::Version(string.to_string());
+}
+
 pub fn to_string_literal(string: &str) -> Token {
     return Token::StringLiteral(string.to_string());
 }
