@@ -1,5 +1,7 @@
 extern crate solfix;
 
+//Solfix
+
 #[cfg(test)]
 mod parser_integration_tests {
     use solfix::lex_4_25;
@@ -28,7 +30,7 @@ mod parser_integration_tests {
                         Box::new(ParseNode {
                             node: lex_4_25::Token::OpenBrace,
                             children: vec![
-                                Box::new(ParseNode { 
+                                Box::new(ParseNode {
                                     node: lex_4_25::Token::StateVariable,
                                     children: vec![
                                         Box::new(lex_4_25::Token::Address.to_leaf()),
@@ -36,7 +38,7 @@ mod parser_integration_tests {
                                         Box::new(lex_4_25::Token::Identifier("owner".to_string()).to_leaf())
                                     ]
                                 }),
-                                Box::new(ParseNode { 
+                                Box::new(ParseNode {
                                     node: lex_4_25::Token::Modifier,
                                     children: vec![
                                         Box::new(lex_4_25::Token::Identifier("onlyOwner".to_string()).to_leaf()),
@@ -195,4 +197,93 @@ mod parser_integration_tests {
         assert_eq!(expected_tree, actual_tree);
     }
     */
-} 
+}
+    #[test]
+    fn IACLOracle_test() {
+        let input = fs::read_to_string("./contracts/IACLOracle.sol")
+            .expect("Test file not found: ./contracts/IACLOracle.sol");
+            let actual_tree = parse(input);
+            let expected_tree = ParseTree {
+                children: vec![
+                    ParseNode {
+                        node: lex_4_25::Token::Pragma,
+                        children: vec![
+                            Box::new(lex_4_25::Token::Identifier("solidity".to_string()).to_leaf()),
+                            Box::new(lex_4_25::Token::BitwiseXor.to_leaf()),
+                            Box::new(lex_4_25::Token::Version("0.4.25".to_string()).to_leaf())
+                        ]
+                    },
+                    ParseNode {
+                        node: lex_4_25::Token::Interface,
+                        children: vec![
+                            Box::new(lex_4_25::Token::Identifier("IACLOracle".to_string()).to_leaf()),
+                            Box::new(ParseNode {
+                                node: lex_4_25::Token::OpenBrace,
+                                children: vec![
+                                    Box::new(ParseNode {
+                                        node: lex_4_25::Token::Function,
+                                        children: vec![
+                                            Box::new(lex_4_25::Token::Identifier("canPerform".to_string()).to_leaf()),
+                                            Box::new(ParseNode {
+                                                node: lex_4_25::Token::OpenParenthesis,
+                                                children: vec![
+                                                    Box::new(ParseNode {
+                                                        node: lex_4_25::Token::StateVariable,
+                                                        children: vec![
+                                                            Box::new(lex_4_25::Token::Address.to_leaf()),
+                                                            Box::new(lex_4_25::Token::Identifier("who".to_string()).to_leaf())
+                                                        ]
+                                                    }),
+                                                    Box::new(ParseNode {
+                                                        node: lex_4_25::Token::StateVariable,
+                                                        children: vec![
+                                                            Box::new(lex_4_25::Token::Address.to_leaf()),
+                                                            Box::new(lex_4_25::Token::Identifier("where".to_string()).to_leaf())
+                                                        ]
+                                                    }),
+                                                    Box::new(ParseNode {
+                                                        node: lex_4_25::Token::StateVariable,
+                                                        children: vec![
+                                                            Box::new(lex_4_25::Token::Bytes32.to_leaf()),
+                                                            Box::new(lex_4_25::Token::Identifier("what".to_string()).to_leaf())
+                                                        ]
+                                                    }),
+                                                    Box::new(ParseNode {
+                                                        node: lex_4_25::Token::StateVariable,
+                                                        children: vec![
+                                                            Box::new(lex_4_25::Token::Uint256.to_leaf()),
+                                                            Box::new(ParseNode {
+                                                                node: lex_4_25::Token::OpenBracket
+                                                                children: vec![]
+                                                            }]
+                                                            Box::new(lex_4_25::Token::Identifier("who".to_string()).to_leaf())
+                                                    }),
+                                                ]
+                                            })
+                                        ]
+                                    })
+                                    Box::new(ParseNode {
+                                        node: lex_4_25::Token::External,
+                                        children: vec![
+                                            Box::new(lex_4_25::Token::Identifier("view".to_string()).to_leaf())
+                                        ]
+                                    })
+                                    Box::new(ParseNode {
+                                        node: lex_4_25::Token::Returns,
+                                        children: vec![
+                                            Box::new(ParseNode {
+                                                node: lex_4_25::Token::OpenBracket
+                                                children: vec![
+                                                    Box::new(lex_4_25::Token::bool.to_leaf()),
+                                                ]
+                                            })
+                                        ]
+                                    })
+                                ]
+                            })
+                        ]
+                    }
+                ]
+            };
+            assert_eq!(expected_tree, actual_tree);
+        }
