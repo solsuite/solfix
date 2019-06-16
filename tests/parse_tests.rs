@@ -17,7 +17,7 @@ mod parse_tests {
                 as_leaf(lex_4_25::to_version("0.4.25"))
             ])
         ]);
-        expect_eq(expect, actual);
+        expect_tree_eq(expect, actual);
     }
 
     #[test]
@@ -30,7 +30,7 @@ mod parse_tests {
                 as_leaf(lex_4_25::to_version("0.4.25"))
             ])
         ]);
-        expect_eq(expect, actual);
+        expect_tree_eq(expect, actual);
     }
 
     /*** Contract ***/
@@ -44,7 +44,7 @@ mod parse_tests {
                 as_leaf(lex_4_25::Token::OpenBrace)
             ])
         ]);
-        expect_eq(expect, actual);
+        expect_tree_eq(expect, actual);
     }
 
     #[test]
@@ -63,7 +63,7 @@ mod parse_tests {
                 as_leaf(lex_4_25::Token::OpenBrace)
             ])
         ]);
-        expect_eq(expect, actual);
+        expect_tree_eq(expect, actual);
     }
 
     #[test]
@@ -80,7 +80,7 @@ mod parse_tests {
                 ])
             ])
         ]);
-        expect_eq(expect, actual);
+        expect_tree_eq(expect, actual);
     }
 
     #[test]
@@ -100,7 +100,7 @@ mod parse_tests {
                 ])
             ])
         ]);
-        expect_eq(expect, actual);
+        expect_tree_eq(expect, actual);
     }
 
     #[test]
@@ -117,7 +117,7 @@ mod parse_tests {
                 ])
             ])
         ]);
-        expect_eq(expect, actual);
+        expect_tree_eq(expect, actual);
     }
 
     #[test]
@@ -150,7 +150,7 @@ mod parse_tests {
                 ])
             ]) 
         ]);
-        expect_eq(expect, actual);
+        expect_tree_eq(expect, actual);
     }
 
     #[test]
@@ -170,7 +170,7 @@ mod parse_tests {
                 ])
             ])
         ]);
-        expect_eq(expect, actual);
+        expect_tree_eq(expect, actual);
     }
 
     #[test]
@@ -201,7 +201,7 @@ mod parse_tests {
                 ])
             ])
         ]);
-        expect_eq(expect, actual);
+        expect_tree_eq(expect, actual);
     }
 
     #[test]
@@ -218,7 +218,7 @@ mod parse_tests {
                 ])
             ])
         ]);
-        expect_eq(expect, actual);
+        expect_tree_eq(expect, actual);
     }
 
     #[test]
@@ -235,7 +235,7 @@ mod parse_tests {
                 ])
             ])
         ]);
-        expect_eq(expect, actual);
+        expect_tree_eq(expect, actual);
     }
 
     #[test]
@@ -252,6 +252,6 @@ mod parse_tests {
                 ])
             ])
         ]);
-        expect_eq(expect, actual);
+        expect_tree_eq(expect, actual);
     }
 }

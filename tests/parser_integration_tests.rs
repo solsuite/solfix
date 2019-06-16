@@ -47,6 +47,6 @@ mod parser_integration_tests {
                 ])
             ])
         ]);
-        expect_eq(expect, actual);
+        expect_tree_eq(expect, actual);
     }
 } 
