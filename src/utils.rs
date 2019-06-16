@@ -11,7 +11,7 @@ pub mod test_utils {
          * Fail a lexer test, given some expected and actual token.
          */
         pub fn fail_test(expect: lex_4_25::Token, actual: lex_4_25::Token) {
-            println!("Expected: {:?} | Actual: {:?}", expect, actual);
+            panic!("Expected: {:?} | Actual: {:?}", expect, actual);
         }
 
         /**
