@@ -27,10 +27,10 @@ pub mod test_utils {
             Box::new(t.to_leaf())
         }
 
-        pub fn as_node(t: lex_4_25::Token, children: Vec<Box<parse_4_25::ParseNode>>) -> Box<parse_4_25::ParseNode> {
+        pub fn as_node(node: lex_4_25::Token, children: Vec<Box<parse_4_25::ParseNode>>) -> Box<parse_4_25::ParseNode> {
             Box::new(parse_4_25::ParseNode {
-                node: t,
-                children: children
+                node,
+                children
             })
         }
 

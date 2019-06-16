@@ -71,22 +71,13 @@ mod parse_tests {
                     node: lex_4_25::Token::Contract,
                     children: vec![
                         as_leaf(lex_4_25::to_identifier("B")),
-                        as_node(
-                            lex_4_25::Token::Is,
-                            vec![
-                                as_node(
-                                    lex_4_25::Token::OpenParenthesis,
-                                    vec![
-                                        as_node(
-                                            lex_4_25::Token::UserDefinedTypeName,
-                                            vec![
-                                                as_leaf(lex_4_25::to_identifier("A"))
-                                            ]
-                                        )
-                                    ]
-                                )
-                            ]
-                        ),
+                        as_node(lex_4_25::Token::Is, vec![
+                            as_node(lex_4_25::Token::OpenParenthesis, vec![
+                                as_node(lex_4_25::Token::UserDefinedTypeName, vec![
+                                    as_leaf(lex_4_25::to_identifier("A"))
+                                ])
+                            ])
+                        ]),
                         as_leaf(lex_4_25::Token::OpenBrace)
                     ]
                 }
@@ -104,18 +95,12 @@ mod parse_tests {
                     node: lex_4_25::Token::Contract,
                     children: vec![
                         as_leaf(lex_4_25::to_identifier("Enum")),
-                        as_node(
-                            lex_4_25::Token::OpenBrace,
-                            vec![
-                                as_node(
-                                    lex_4_25::Token::Enum,
-                                    vec![
-                                        as_leaf(lex_4_25::to_identifier("Foo")),
-                                        as_leaf(lex_4_25::Token::OpenBrace)
-                                    ]
-                                )
-                            ]
-                        )
+                        as_node(lex_4_25::Token::OpenBrace, vec![
+                            as_node(lex_4_25::Token::Enum, vec![
+                                as_leaf(lex_4_25::to_identifier("Foo")),
+                                as_leaf(lex_4_25::Token::OpenBrace)
+                            ])
+                        ])
                     ]
                 }
             ]
@@ -132,24 +117,15 @@ mod parse_tests {
                     node: lex_4_25::Token::Contract,
                     children: vec![
                         as_leaf(lex_4_25::to_identifier("Enum")),
-                        as_node(
-                            lex_4_25::Token::OpenBrace,
-                            vec![
-                                as_node(
-                                    lex_4_25::Token::Enum,
-                                    vec![
-                                        as_leaf(lex_4_25::to_identifier("Foo")),
-                                        as_node(
-                                            lex_4_25::Token::OpenBrace,
-                                            vec![
-                                                as_leaf(lex_4_25::to_identifier("Bar")),
-                                                as_leaf(lex_4_25::to_identifier("Baz"))
-                                            ]
-                                        )
-                                    ]
-                                )
-                            ]
-                        )
+                        as_node(lex_4_25::Token::OpenBrace, vec![
+                            as_node(lex_4_25::Token::Enum, vec![
+                                as_leaf(lex_4_25::to_identifier("Foo")),
+                                as_node(lex_4_25::Token::OpenBrace, vec![
+                                    as_leaf(lex_4_25::to_identifier("Bar")),
+                                    as_leaf(lex_4_25::to_identifier("Baz"))
+                                ])
+                            ])
+                        ])
                     ]
                 }
             ]
@@ -166,18 +142,12 @@ mod parse_tests {
                     node: lex_4_25::Token::Contract,
                     children: vec![
                         as_leaf(lex_4_25::to_identifier("Event")),
-                        as_node(
-                            lex_4_25::Token::OpenBrace,
-                            vec![
-                                as_node(
-                                    lex_4_25::Token::Event,
-                                    vec![
-                                        as_leaf(lex_4_25::to_identifier("emptyEvent")),
-                                        as_leaf(lex_4_25::Token::OpenParenthesis)
-                                    ]
-                                ) 
-                            ]
-                        )
+                        as_node(lex_4_25::Token::OpenBrace, vec![
+                            as_node(lex_4_25::Token::Event, vec![
+                                as_leaf(lex_4_25::to_identifier("emptyEvent")),
+                                as_leaf(lex_4_25::Token::OpenParenthesis)
+                            ]) 
+                        ])
                     ]
                 }
             ]
@@ -194,46 +164,28 @@ mod parse_tests {
                     node: lex_4_25::Token::Contract,
                     children: vec![
                         as_leaf(lex_4_25::to_identifier("Event")),
-                        as_node(
-                            lex_4_25::Token::OpenBrace,
-                            vec![
-                                as_node(
-                                    lex_4_25::Token::Event,
-                                    vec![
-                                        as_leaf(lex_4_25::to_identifier("Transfer")),
-                                        as_node(
-                                            lex_4_25::Token::OpenParenthesis,
-                                            vec![
-                                                as_node(
-                                                    lex_4_25::Token::EventParameter,
-                                                    vec![
-                                                        as_leaf(lex_4_25::Token::Address),
-                                                        as_leaf(lex_4_25::Token::Indexed),
-                                                        as_leaf(lex_4_25::to_identifier("from"))
-                                                    ]
-                                                ),
-                                                as_node(
-                                                    lex_4_25::Token::EventParameter,
-                                                    vec![
-                                                        as_leaf(lex_4_25::Token::Address),
-                                                        as_leaf(lex_4_25::Token::Indexed),
-                                                        as_leaf(lex_4_25::to_identifier("to"))
-                                                    ]
-                                                ),
-                                                as_node(
-                                                    lex_4_25::Token::EventParameter,
-                                                    vec![
-                                                        as_leaf(lex_4_25::Token::Uint256),
-                                                        as_leaf(lex_4_25::Token::Indexed),
-                                                        as_leaf(lex_4_25::to_identifier("value"))
-                                                    ]
-                                                )
-                                            ]
-                                        )
-                                    ]
-                                )
-                            ]
-                        )
+                        as_node(lex_4_25::Token::OpenBrace, vec![
+                            as_node(lex_4_25::Token::Event, vec![
+                                as_leaf(lex_4_25::to_identifier("Transfer")),
+                                as_node(lex_4_25::Token::OpenParenthesis, vec![
+                                    as_node(lex_4_25::Token::EventParameter, vec![
+                                        as_leaf(lex_4_25::Token::Address),
+                                        as_leaf(lex_4_25::Token::Indexed),
+                                        as_leaf(lex_4_25::to_identifier("from"))
+                                    ]),
+                                    as_node(lex_4_25::Token::EventParameter, vec![
+                                        as_leaf(lex_4_25::Token::Address),
+                                        as_leaf(lex_4_25::Token::Indexed),
+                                        as_leaf(lex_4_25::to_identifier("to"))
+                                    ]),
+                                    as_node(lex_4_25::Token::EventParameter, vec![
+                                        as_leaf(lex_4_25::Token::Uint256),
+                                        as_leaf(lex_4_25::Token::Indexed),
+                                        as_leaf(lex_4_25::to_identifier("value"))
+                                    ])
+                                ])
+                            ])
+                        ])
                     ]
                 }
             ]
@@ -250,21 +202,15 @@ mod parse_tests {
                     node: lex_4_25::Token::Contract,
                     children: vec![
                         as_leaf(lex_4_25::to_identifier("Function")),
-                        as_node(
-                            lex_4_25::Token::OpenBrace,
-                            vec![
-                                as_node(
-                                    lex_4_25::Token::Function,
-                                    vec![
-                                        as_leaf(lex_4_25::to_identifier("doNothing")),
-                                        as_leaf(lex_4_25::Token::OpenParenthesis),
-                                        as_leaf(lex_4_25::Token::Internal),
-                                        as_leaf(lex_4_25::Token::Pure),
-                                        as_leaf(lex_4_25::Token::OpenBrace)
-                                    ]
-                                )
-                            ]
-                        )
+                        as_node(lex_4_25::Token::OpenBrace, vec![
+                            as_node(lex_4_25::Token::Function, vec![
+                                as_leaf(lex_4_25::to_identifier("doNothing")),
+                                as_leaf(lex_4_25::Token::OpenParenthesis),
+                                as_leaf(lex_4_25::Token::Internal),
+                                as_leaf(lex_4_25::Token::Pure),
+                                as_leaf(lex_4_25::Token::OpenBrace)
+                            ])
+                        ])
                     ]
                 }
             ]
@@ -281,47 +227,26 @@ mod parse_tests {
                     node: lex_4_25::Token::Contract,
                     children: vec![
                         as_leaf(lex_4_25::to_identifier("Function")),
-                        as_node(
-                            lex_4_25::Token::OpenBrace,
-                            vec![
-                                as_node(
-                                    lex_4_25::Token::Function,
-                                    vec![
-                                        as_leaf(lex_4_25::to_identifier("emitEvent")),
-                                        as_leaf(lex_4_25::Token::OpenParenthesis),
-                                        as_leaf(lex_4_25::Token::Internal),
-                                        as_node(
-                                            lex_4_25::Token::OpenBrace,
-                                            vec![
-                                                as_node(
-                                                    lex_4_25::Token::Emit,
-                                                    vec![
-                                                        as_node(
-                                                            lex_4_25::Token::OpenParenthesis,
-                                                            vec![
-                                                                as_leaf(lex_4_25::to_identifier("someEvent")),
-                                                                as_node(
-                                                                    lex_4_25::Token::OpenParenthesis,
-                                                                    vec![
-                                                                        as_node(
-                                                                            lex_4_25::Token::Plus,
-                                                                            vec![
-                                                                                as_leaf(lex_4_25::to_decimal_number("1")),
-                                                                                as_leaf(lex_4_25::to_decimal_number("1"))
-                                                                            ]
-                                                                        )
-                                                                    ]
-                                                                )
-                                                            ]
-                                                        )
-                                                    ]
-                                                ),
-                                            ]
-                                        )
-                                    ]
-                                )
-                            ]
-                        )
+                        as_node(lex_4_25::Token::OpenBrace, vec![
+                            as_node(lex_4_25::Token::Function, vec![
+                                as_leaf(lex_4_25::to_identifier("emitEvent")),
+                                as_leaf(lex_4_25::Token::OpenParenthesis),
+                                as_leaf(lex_4_25::Token::Internal),
+                                as_node(lex_4_25::Token::OpenBrace, vec![
+                                    as_node(lex_4_25::Token::Emit, vec![
+                                        as_node(lex_4_25::Token::OpenParenthesis, vec![
+                                            as_leaf(lex_4_25::to_identifier("someEvent")),
+                                            as_node(lex_4_25::Token::OpenParenthesis, vec![
+                                                as_node(lex_4_25::Token::Plus, vec![
+                                                    as_leaf(lex_4_25::to_decimal_number("1")),
+                                                    as_leaf(lex_4_25::to_decimal_number("1"))
+                                                ])
+                                            ])
+                                        ])
+                                    ])
+                                ])
+                            ])
+                        ])
                     ]
                 }
             ]
@@ -338,21 +263,12 @@ mod parse_tests {
                     node: lex_4_25::Token::Contract,
                     children: vec![
                         as_leaf(lex_4_25::to_identifier("Modifier")),
-                        as_node(
-                            lex_4_25::Token::OpenBrace,
-                            vec![
-                                as_node(
-                                    lex_4_25::Token::Modifier,
-                                    vec![
-                                        as_leaf(lex_4_25::to_identifier("doNothing")),
-                                        as_node(
-                                            lex_4_25::Token::OpenBrace,
-                                            vec![ as_leaf(lex_4_25::Token::Placeholder) ]
-                                        )
-                                    ]
-                                )
-                            ]
-                        )
+                        as_node(lex_4_25::Token::OpenBrace, vec![
+                            as_node(lex_4_25::Token::Modifier, vec![
+                                as_leaf(lex_4_25::to_identifier("doNothing")),
+                                as_node(lex_4_25::Token::OpenBrace, vec![ as_leaf(lex_4_25::Token::Placeholder) ])
+                            ])
+                        ])
                     ]
                 }
             ]
@@ -369,18 +285,12 @@ mod parse_tests {
                     node: lex_4_25::Token::Contract,
                     children: vec![
                         as_leaf(lex_4_25::to_identifier("Using")),
-                        as_node(
-                            lex_4_25::Token::OpenBrace,
-                            vec![
-                                as_node(
-                                    lex_4_25::Token::Using,
-                                    vec![
-                                        as_leaf(lex_4_25::to_identifier("SafeMath")),
-                                        as_leaf(lex_4_25::Token::Uint256)
-                                    ]
-                                )
-                            ]
-                        )
+                        as_node(lex_4_25::Token::OpenBrace, vec![
+                            as_node(lex_4_25::Token::Using, vec![
+                                as_leaf(lex_4_25::to_identifier("SafeMath")),
+                                as_leaf(lex_4_25::Token::Uint256)
+                            ])
+                        ])
                     ]
                 }
             ]
@@ -397,18 +307,12 @@ mod parse_tests {
                     node: lex_4_25::Token::Contract,
                     children: vec![
                         as_leaf(lex_4_25::to_identifier("Using")),
-                        as_node(
-                            lex_4_25::Token::OpenBrace,
-                            vec![
-                                as_node(
-                                    lex_4_25::Token::Using,
-                                    vec![
-                                        as_leaf(lex_4_25::to_identifier("SafeMath")),
-                                        as_leaf(lex_4_25::Token::Multiply)
-                                    ]
-                                )
-                            ]
-                        )
+                        as_node(lex_4_25::Token::OpenBrace, vec![
+                            as_node(lex_4_25::Token::Using, vec![
+                                as_leaf(lex_4_25::to_identifier("SafeMath")),
+                                as_leaf(lex_4_25::Token::Multiply)
+                            ])
+                        ])
                     ]
                 }
             ]
