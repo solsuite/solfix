@@ -108,7 +108,7 @@ mod parser_integration_tests {
                                                         )
                                                     ]
                                                 ),
-                                                lex_4_25::Token::Placeholder.to_boxed_leaf()
+                                                NonTerminal::Identifier(String::from("_")).to_boxed_leaf()
                                             ]
                                         )
                                     ]
