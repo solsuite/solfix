@@ -41,6 +41,16 @@ pub mod test_utils {
             }
         }
 
+        pub fn as_tree(children: Vec<parse_4_25::ParseNode>) -> parse_4_25::ParseTree {
+            parse_4_25::ParseTree {
+                children
+            }
+        }
+
+        pub fn parse_str(string: &str) -> parse_4_25::ParseTree {
+            parse_4_25::parse(String::from(string))
+        }
+
         pub fn expect_eq(expect: parse_4_25::ParseTree, actual: parse_4_25::ParseTree) {
             match expect == actual {
                 true => (),
