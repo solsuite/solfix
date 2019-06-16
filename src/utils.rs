@@ -34,10 +34,24 @@ pub mod test_utils {
             })
         }
 
+        pub fn as_node_raw(node: lex_4_25::Token, children: Vec<Box<parse_4_25::ParseNode>>) -> parse_4_25::ParseNode {
+            parse_4_25::ParseNode {
+                node,
+                children
+            }
+        }
+
         pub fn expect_eq(expect: parse_4_25::ParseTree, actual: parse_4_25::ParseTree) {
             match expect == actual {
                 true => (),
-                false => panic!("\nExpected: {:#?} \nActual: {:#?}", expect, actual)
+                false => panic!("\nExpected: {:#?} \nActual: {:#?}\n", expect, actual)
+            }
+        }
+
+        pub fn expect_node_eq(expect: parse_4_25::ParseNode, actual: parse_4_25::ParseNode) {
+            match expect == actual {
+                true => (),
+                false => panic!("\nExpected: {:#?} \nActual: {:#?}\n", expect, actual)
             }
         }
     }
