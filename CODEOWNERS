@@ -1,0 +1,22 @@
+# This file lists the owners of various parts of the solfix codebase. This
+# list is in alphabetical order by username, so the order does not indicate
+# any form of seniority. Code owners must approve pull requests that affect 
+# their sections before these pull requests can be merged.
+
+# The owner for the codeowners file
+/CODEOWNERS @jalextowle
+
+# The owners of the contracts directory
+/contracts/* @jalextowle @wadeAlexC
+
+# The owners of solfix's main file
+/src/main.rs @jalextowle @wadeAlexC
+
+# The owners of the lexer
+/src/lex_4_25.rs @jalextowle @wadeAlexC
+
+# The owners of the parser
+/src/parse_4_25.rs @jalextowle
+
+# The owners of the test suite
+/tests/* @jalextowle @wadeAlexC
