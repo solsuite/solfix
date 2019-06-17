@@ -219,6 +219,7 @@ pub enum Token {
     UserDefinedTypeName,
     Using,
     Var,
+    VariableDeclaration,
     Version(String),
     View,
     Weeks,
