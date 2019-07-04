@@ -273,7 +273,7 @@ mod parse_expression_tests {
     }
 
     /*** Function call ***/
-    
+
     #[test]
     fn function_call_test1() {
         let function_call = "Identifier()";

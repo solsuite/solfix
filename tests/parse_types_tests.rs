@@ -6,7 +6,7 @@ mod types_tests {
     use solfix::parse_4_25::parse_type_name;
 
     #[test]
-    fn elementary_type_test1() { 
+    fn elementary_type_test1() {
         let cur = &mut 0;
         let chars = &String::from("address").chars().collect::<Vec<char>>();
         let type_node = parse_type_name(chars, cur);
@@ -18,7 +18,7 @@ mod types_tests {
     }
 
     #[test]
-    fn user_defined_type_test1() { 
+    fn user_defined_type_test1() {
         let cur = &mut 0;
         let chars = &String::from("Address.Enum").chars().collect::<Vec<char>>();
         let type_node = parse_type_name(chars, cur);

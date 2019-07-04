@@ -10,8 +10,8 @@ mod parse_tests {
     #[test]
     fn solidity_4_25_pragma_test1() {
         let actual_tree = parse(String::from("pragma solidity 0.4.25;"));
-        let expected_tree = ParseTree { 
-            children: vec![ 
+        let expected_tree = ParseTree {
+            children: vec![
                 ParseNode {
                     node: lex_4_25::Token::Pragma,
                     children: vec![
@@ -27,8 +27,8 @@ mod parse_tests {
     #[test]
     fn solidity_4_25_pragma_test2() {
         let actual_tree = parse(String::from("pragma solidity ^0.4.25;"));
-        let expected_tree = ParseTree { 
-            children: vec![ 
+        let expected_tree = ParseTree {
+            children: vec![
                 ParseNode {
                     node: lex_4_25::Token::Pragma,
                     children: vec![
@@ -47,8 +47,8 @@ mod parse_tests {
     #[test]
     fn contract_test1() {
         let actual_tree = parse(String::from("contract A {}"));
-        let expected_tree = ParseTree { 
-            children: vec![ 
+        let expected_tree = ParseTree {
+            children: vec![
                 ParseNode {
                     node: lex_4_25::Token::Contract,
                     children: vec![
@@ -64,8 +64,8 @@ mod parse_tests {
     #[test]
     fn contract_test2() {
         let actual_tree = parse(String::from("contract B is A {}"));
-        let expected_tree = ParseTree { 
-            children: vec![ 
+        let expected_tree = ParseTree {
+            children: vec![
                 ParseNode {
                     node: lex_4_25::Token::Contract,
                     children: vec![
@@ -95,7 +95,7 @@ mod parse_tests {
     }
 
     #[test]
-    fn contract_enum_test1() { 
+    fn contract_enum_test1() {
         let actual_tree = parse(String::from("contract Enum { enum Foo { } }"));
         let expected_tree = ParseTree {
             children: vec![
@@ -123,7 +123,7 @@ mod parse_tests {
     }
 
     #[test]
-    fn contract_enum_test2() { 
+    fn contract_enum_test2() {
         let actual_tree = parse(String::from("contract Enum { enum Foo { Bar, Baz } }"));
         let expected_tree = ParseTree {
             children: vec![
@@ -157,7 +157,7 @@ mod parse_tests {
     }
 
     #[test]
-    fn contract_event_test1() { 
+    fn contract_event_test1() {
         let actual_tree = parse(String::from("contract Event { event emptyEvent(); }"));
         let expected_tree = ParseTree {
             children: vec![
@@ -174,7 +174,7 @@ mod parse_tests {
                                         Box::new(lex_4_25::Token::Identifier("emptyEvent".to_string()).to_leaf()),
                                         Box::new(lex_4_25::Token::OpenParenthesis.to_leaf())
                                     ]
-                                }) 
+                                })
                             ]
                         })
                     ]
@@ -185,7 +185,7 @@ mod parse_tests {
     }
 
     #[test]
-    fn contract_event_test2() { 
+    fn contract_event_test2() {
         let actual_tree = parse(String::from("contract Event { event Transfer(address indexed from, address indexed to, uint256 indexed value); }"));
         let expected_tree = ParseTree {
             children: vec![
@@ -241,7 +241,7 @@ mod parse_tests {
     }
 
     #[test]
-    fn contract_function_test1() { 
+    fn contract_function_test1() {
         let actual_tree = parse(String::from("contract Function { function doNothing() internal pure { } }"));
         let expected_tree = ParseTree {
             children: vec![
@@ -272,7 +272,7 @@ mod parse_tests {
     }
 
     #[test]
-    fn contract_function_test2() { 
+    fn contract_function_test2() {
         let actual_tree = parse(String::from("contract Function { function emitEvent() internal { emit someEvent(1 + 1); } }"));
         let expected_tree = ParseTree {
             children: vec![
@@ -329,7 +329,7 @@ mod parse_tests {
     }
 
     #[test]
-    fn contract_modifier_test1() { 
+    fn contract_modifier_test1() {
         let actual_tree = parse(String::from("contract Modifier { modifier doNothing { _;} }"));
         let expected_tree = ParseTree {
             children: vec![
@@ -360,7 +360,7 @@ mod parse_tests {
     }
 
     #[test]
-    fn contract_using_for_test1() { 
+    fn contract_using_for_test1() {
         let actual_tree = parse(String::from("contract Using { using SafeMath for uint256; }"));
         let expected_tree = ParseTree {
             children: vec![
