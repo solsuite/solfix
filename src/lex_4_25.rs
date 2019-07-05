@@ -1109,8 +1109,6 @@ fn match_rational(line: &Vec<char>, cur: &mut usize) -> Token {
  * to the end of the Token in the parsed line
  */
 pub fn next_token(line: &Vec<char>, cur: &mut usize) -> Token {
-    let mut next = Token::NoMatch;
-
     loop {
         if *cur >= line.len() {
             return Token::EOF;
@@ -1170,7 +1168,6 @@ pub fn next_token(line: &Vec<char>, cur: &mut usize) -> Token {
             }
         }
     }
-    next
 }
 
 // Return the next token in the line, without incrementing cur
