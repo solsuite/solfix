@@ -88,6 +88,7 @@ pub enum NonTerminal {
     Token(lex_4_25::Token),
     // Error NonTerminals
     Invalid(Box<NonTerminal>),
+    InvalidPair(Box<NonTerminal>, Box<NonTerminal>),
     Empty,
 }
 
@@ -115,7 +116,7 @@ impl ParseTree {
         self.add_leaf(NonTerminal::Token(token));
     }
 
-    fn add_tree(&mut self, mut other: ParseTree) {
+    fn add_tree(&mut self, other: ParseTree) {
         self.leaves.push(Box::new(other));
     }
 
@@ -153,6 +154,10 @@ impl lex_4_25::Token {
     pub fn to_invalid(self) -> NonTerminal {
         NonTerminal::Invalid(Box::new(self.to_token()))
     }
+
+    pub fn to_invalid_pair(self, actual: lex_4_25::Token) -> NonTerminal {
+        NonTerminal::InvalidPair(Box::new(self.to_token()), Box::new(actual.to_token()))
+    }
 }
 
 impl NonTerminal {
@@ -173,6 +178,14 @@ impl NonTerminal {
 
     pub fn to_invalid(self) -> NonTerminal {
         NonTerminal::Invalid(Box::new(self))
+    }
+
+    pub fn to_invalid_pair(self, actual: NonTerminal) -> NonTerminal {
+        NonTerminal::InvalidPair(Box::new(self), Box::new(actual))
+    }
+
+    pub fn to_invalid_token_pair(self, actual: lex_4_25::Token) -> NonTerminal {
+        NonTerminal::InvalidPair(Box::new(self), Box::new(actual.to_token()))
     }
 }
 
@@ -199,9 +212,9 @@ pub fn parse(input_string: String) -> ParseTree {
             lex_4_25::Token::EOF => {
                 lex_4_25::next_token(input, current_ptr);
             }
-            _ => {
-                // TODO(jalextowle): Should use an invalid list
-                tree.root = NonTerminal::SourceUnit.to_invalid();
+            actual => {
+                lex_4_25::next_token(input, current_ptr);
+                tree.root = NonTerminal::SourceUnit.to_invalid_token_pair(actual);
             }
         }
     }
@@ -290,7 +303,7 @@ fn parse_contract_definition(input: &Vec<char>, current_ptr: &mut usize) -> Pars
     // Determine if the ContractDefinition specifies an inheritance hierarchy for the contract that
     // is being defined.
     let mut inheritance = false;
-    match lex_4_25::next_token(input, current_ptr) {
+    match lex_4_25::peek_token(input, current_ptr) {
         lex_4_25::Token::OpenBrace => (),
         lex_4_25::Token::Is => inheritance = true,
         // TODO(jalextowle): It would be nice to be able to add a list of expected tokens so that
@@ -315,6 +328,11 @@ fn parse_contract_definition(input: &Vec<char>, current_ptr: &mut usize) -> Pars
  */
 fn parse_inheritance_list(input: &Vec<char>, current_ptr: &mut usize) -> ParseTree {
     let mut tree = NonTerminal::InheritanceList.to_leaf();
+    // Expect an Is token
+    match lex_4_25::next_token(input, current_ptr) {
+        lex_4_25::Token::Is => (),
+        actual => tree.root = NonTerminal::InheritanceList.to_invalid_token_pair(actual)
+    }
     let mut stop = false;
     while !stop {
         tree.add_tree(parse_inheritance_specifier(input, current_ptr));
@@ -357,6 +375,11 @@ fn parse_inheritance_specifier(input: &Vec<char>, current_ptr: &mut usize) -> Pa
  */
 fn parse_contract_part(input: &Vec<char>, current_ptr: &mut usize) -> ParseTree {
     let mut tree = NonTerminal::ContractPart.to_leaf();
+    // Expect an open brace
+    match lex_4_25::next_token(input, current_ptr) {
+        lex_4_25::Token::OpenBrace => (),
+        actual => tree.add_leaf(lex_4_25::Token::OpenBrace.to_invalid_pair(actual))
+    }
     let mut stop = false;
     while !stop {
         match lex_4_25::peek_token(input, current_ptr) {
@@ -369,6 +392,11 @@ fn parse_contract_part(input: &Vec<char>, current_ptr: &mut usize) -> ParseTree 
             lex_4_25::Token::CloseBrace => stop = true,
             _ => tree.add_tree(parse_state_variable_declaration(input, current_ptr))
         }
+    }
+    // Expect a close brace
+    match lex_4_25::next_token(input, current_ptr) {
+        lex_4_25::Token::CloseBrace => (),
+        actual => tree.add_leaf(lex_4_25::Token::CloseBrace.to_invalid_pair(actual))
     }
     tree
 }
@@ -398,7 +426,7 @@ fn parse_state_variable_declaration(input: &Vec<char>, current_ptr: &mut usize) 
             lex_4_25::Token::Constant |
             lex_4_25::Token::Internal |
             lex_4_25::Token::Private  |
-            lex_4_25::Token::Public   => tree.add_leaf(NonTerminal::StateMutability(lex_4_25::next_token(input, current_ptr))),
+            lex_4_25::Token::Public   => tree.add_token(lex_4_25::next_token(input, current_ptr)),
             _ => stop = true
         }
     }
@@ -462,11 +490,9 @@ fn parse_enum_value_list(input: &Vec<char>, current_ptr: &mut usize) -> ParseTre
         // If an identifier is found, add it as an EnumValue to the EnumValueList. Otherwise, break
         // out of the loop.
         match lex_4_25::peek_token(input, current_ptr) {
-            lex_4_25::Token::Identifier(..) => {
-                if let lex_4_25::Token::Identifier(name) = lex_4_25::next_token(input, current_ptr) {
-                    tree.add_leaf(NonTerminal::EnumValue(name));
-                }
-                tree.add_leaf(NonTerminal::EnumValue(lex_4_25::Token::next_identifier_name(input, current_ptr)))
+            lex_4_25::Token::Identifier(name) => {
+                tree.add_leaf(NonTerminal::EnumValue(name));
+                lex_4_25::next_token(input, current_ptr);
             }
             _ => stop = true
         }
@@ -937,6 +963,7 @@ fn parse_operation(input: &Vec<char>, current_ptr: &mut usize, left: ParseTree) 
             }
         }
         lex_4_25::Token::Dot => {
+            lex_4_25::next_token(input, current_ptr);
             tree.root = NonTerminal::MemberAccess;
             // TODO(jalextowle): Is there a way to flatten this if it is all MemberAccess?
             tree.add_tree(left);
@@ -989,7 +1016,7 @@ fn parse_operation(input: &Vec<char>, current_ptr: &mut usize, left: ParseTree) 
                         _ => tree.add_tree(right)
                     }
                 }
-                _ => tree.add_invalid(NonTerminal::Expression)
+                _ => ()
             }
         }
         lex_4_25::Token::Power => {
@@ -1304,6 +1331,7 @@ fn parse_operation(input: &Vec<char>, current_ptr: &mut usize, left: ParseTree) 
             tree.root = NonTerminal::next_token(input, current_ptr);
             tree.add_tree(left);
             let right = parse_expression(input, current_ptr);
+            println!("{:#?}", right);
             match right.root.clone() {
                 NonTerminal::Token(token) => {
                     match token {
@@ -1326,6 +1354,7 @@ fn parse_operation(input: &Vec<char>, current_ptr: &mut usize, left: ParseTree) 
                         _ => tree.add_tree(right)
                     }
                 }
+                id @ NonTerminal::Identifier(..) => tree.add_leaf(id),
                 _ => tree.add_invalid(NonTerminal::Expression)
             }
         }
@@ -1447,7 +1476,9 @@ fn parse_function_call_arguments(input: &Vec<char>, current_ptr: &mut usize) -> 
                 _ => tree.add_invalid_token(lex_4_25::Token::CloseBrace)
             }
         }
-        _ => tree.add_tree(parse_expression_list(input, current_ptr))
+        _ => {
+            tree.add_tree(parse_expression_list(input, current_ptr));
+        }
     }
     match lex_4_25::next_token(input, current_ptr) {
         lex_4_25::Token::CloseParenthesis => (),
@@ -1512,7 +1543,16 @@ pub fn parse_expression(input: &Vec<char>, current_ptr: &mut usize) -> ParseTree
             }
             tree = parse_operation(input, current_ptr, left);
         }
-        lex_4_25::Token::Identifier(..)    |
+        lex_4_25::Token::Identifier(..) => {
+            let left = NonTerminal::next_to_identifier(input, current_ptr).to_leaf();
+            println!("left: {:#?}", left);
+            tree = parse_operation(input, current_ptr, left.clone());
+            println!("tree: {:#?}", tree);
+            match tree.root {
+                NonTerminal::Invalid(..) => tree = left,
+                _ => ()
+            }
+        }
         lex_4_25::Token::HexLiteral(..)    |
         lex_4_25::Token::StringLiteral(..) |
         lex_4_25::Token::True              |
