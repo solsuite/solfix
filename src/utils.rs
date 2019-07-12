@@ -1,27 +1,28 @@
+use std::fmt::Debug;
 use super::lex_4_25;
 use super::parse_4_25;
 
 pub mod test_utils {
     use super::*;
 
+    /**
+     * Fail a test, panicing and printing expected and actual values
+     */
+    pub fn fail_test<T: Debug + PartialEq>(expect: T, actual: T) {
+        panic!("\nExpected: {:#?} \nActual: {:#?}\n", expect, actual)
+    }
+
     pub mod lexer {
         use super::lex_4_25;
 
         /**
-         * Fail a lexer test, given some expected and actual token.
+         * Advance cur in string using next_token, and check that the return matches
+         * the expected Token. If not, the test fails.
          */
-        pub fn fail_test(expect: lex_4_25::Token, actual: lex_4_25::Token) {
-            panic!("Expected: {:?} | Actual: {:?}", expect, actual);
-        }
-
-        /**
-         * Advance cur in s using next_token, and check that the return matches
-         * the expected Token, t. If not, the test fails.
-         */
-        pub fn expect_next_token(s: &Vec<char>, cur: &mut usize, t: lex_4_25::Token) {
-            match lex_4_25::next_token(&s, cur) {
-                ref next if *next == t => (),
-                actual => fail_test(t, actual)
+        pub fn expect_next_token(string: &Vec<char>, cur: &mut usize, token: lex_4_25::Token) {
+            match lex_4_25::next_token(&string, cur) {
+                ref next if *next == token => (),
+                actual => super::fail_test(token, actual)
             };
         }
     }
@@ -33,8 +34,8 @@ pub mod test_utils {
         /**
          * Returns a Token as a ParseNode with no children
          */
-        pub fn as_leaf(t: lex_4_25::Token) -> Box<parse_4_25::ParseNode> {
-            Box::new(t.to_leaf())
+        pub fn as_leaf(token: lex_4_25::Token) -> Box<parse_4_25::ParseNode> {
+            Box::new(token.to_leaf())
         }
 
         /**
@@ -83,7 +84,7 @@ pub mod test_utils {
         pub fn expect_tree_eq(expect: parse_4_25::ParseTree, actual: parse_4_25::ParseTree) {
             match expect == actual {
                 true => (),
-                false => panic!("\nExpected: {:#?} \nActual: {:#?}\n", expect, actual)
+                false => super::fail_test(expect, actual)
             }
         }
 
@@ -94,7 +95,7 @@ pub mod test_utils {
         pub fn expect_node_eq(expect: parse_4_25::ParseNode, actual: parse_4_25::ParseNode) {
             match expect == actual {
                 true => (),
-                false => panic!("\nExpected: {:#?} \nActual: {:#?}\n", expect, actual)
+                false => super::fail_test(expect, actual)
             }
         }
     }
