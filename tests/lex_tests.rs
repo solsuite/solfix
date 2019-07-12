@@ -3,17 +3,7 @@ extern crate solfix;
 #[cfg(test)]
 mod lexer_tests {
     use solfix::lex_4_25;
-
-    fn fail_test(expect: lex_4_25::Token, actual: lex_4_25::Token) {
-        panic!("Expected: {:?} | Actual: {:?}", expect, actual);
-    }
-
-    fn expect_next_token(s: &Vec<char>, cur: &mut usize, t: lex_4_25::Token) {
-        match lex_4_25::next_token(&s, cur) {
-            ref next if *next == t => (),
-            actual => fail_test(t, actual)
-        };
-    }
+    use solfix::utils::test_utils::lexer::*;
 
     #[test]
     fn recognition_test1() {
