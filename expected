@@ -1,0 +1,106 @@
+ParseTree {
+    root: FunctionTypeName,
+    leaves: [
+        ParseTree {
+            root: FunctionTypeParameterList,
+            leaves: [
+                ParseTree {
+                    root: FunctionTypeParameter,
+                    leaves: [
+                        ParseTree {
+                            root: FunctionTypeName,
+                            leaves: [
+                                ParseTree {
+                                    root: FunctionTypeParameterList,
+                                    leaves: [
+                                        ParseTree {
+                                            root: Token(
+                                                Uint256
+                                            ),
+                                            leaves: []
+                                        }
+                                    ]
+                                },
+                                ParseTree {
+                                    root: Token(
+                                        Internal
+                                    ),
+                                    leaves: []
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        ParseTree {
+            root: Token(
+                External
+            ),
+            leaves: []
+        },
+        ParseTree {
+            root: StateMutability(
+                Payable
+            ),
+            leaves: []
+        },
+        ParseTree {
+            root: Token(
+                Returns
+            ),
+            leaves: [
+                ParseTree {
+                    root: FunctionTypeParameterList,
+                    leaves: [
+                        ParseTree {
+                            root: FunctionTypeParameter,
+                            leaves: [
+                                ParseTree {
+                                    root: FunctionTypeName,
+                                    leaves: [
+                                        ParseTree {
+                                            root: FunctionTypeParameterList,
+                                            leaves: [
+                                                ParseTree {
+                                                    root: Token(
+                                                        Bool
+                                                    ),
+                                                    leaves: []
+                                                }
+                                            ]
+                                        },
+                                        ParseTree {
+                                            root: Token(
+                                                External
+                                            ),
+                                            leaves: []
+                                        },
+                                        ParseTree {
+                                            root: Token(
+                                                Returns
+                                            ),
+                                            leaves: [
+                                                ParseTree {
+                                                    root: FunctionTypeParameterList,
+                                                    leaves: [
+                                                        ParseTree {
+                                                            root: Token(
+                                                                Uint256
+                                                            ),
+                                                            leaves: []
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
