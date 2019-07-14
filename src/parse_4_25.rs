@@ -1606,10 +1606,9 @@ fn parse_expression_list(input: &Vec<char>, current_ptr: &mut usize) -> ParseTre
     let mut stop = false;
     while !stop {
         let returned = parse_expression(&input, current_ptr);
-        if returned.leaves.len() == 0 {
-            stop = true;
-        } else {
-            tree.add_tree(returned);
+        match tree.root {
+            NonTerminal::Invalid(..) => stop = true,
+            _ => tree.add_tree(returned)
         }
         if !stop {
             if let lex_4_25::Token::Comma = lex_4_25::peek_token(input, current_ptr) {
