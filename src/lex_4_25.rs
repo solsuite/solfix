@@ -134,7 +134,7 @@ pub enum Token {
     LessThan,
     LessThanOrEquals,
     Let,
-    Library, 
+    Library,
     LogicalAnd,
     LogicalOr,
     Mapping,
@@ -462,10 +462,10 @@ impl CharExt for char {
 
     // Returns true if the char could be a part of a rational literal
     fn is_rational(&self) -> bool {
-        return 
-            *self == 'e' || 
-            *self == 'E' || 
-            *self == '.' || 
+        return
+            *self == 'e' ||
+            *self == 'E' ||
+            *self == '.' ||
             self.is_digit(10);
     }
 
@@ -521,7 +521,7 @@ fn match_collected(collected: String) -> Token {
     let version_re = Regex::new(r"^\^?[0-9]+\.[0-9]+\.[0-9]+").unwrap();
     return match collected.as_ref() {
         "address" => Token::Address,
-        "anonymous" => Token::Anonymous, 
+        "anonymous" => Token::Anonymous,
         "as" => Token::As,
         "assembly" => Token::Assembly,
         "bool" => Token::Bool,
@@ -1109,8 +1109,6 @@ fn match_rational(line: &Vec<char>, cur: &mut usize) -> Token {
  * to the end of the Token in the parsed line
  */
 pub fn next_token(line: &Vec<char>, cur: &mut usize) -> Token {
-    let mut next = Token::NoMatch;
-    
     loop {
         if *cur >= line.len() {
             return Token::EOF;
@@ -1170,7 +1168,6 @@ pub fn next_token(line: &Vec<char>, cur: &mut usize) -> Token {
             }
         }
     }
-    next
 }
 
 // Return the next token in the line, without incrementing cur
@@ -1181,7 +1178,7 @@ pub fn peek_token(line: &Vec<char>, cur: &mut usize) -> Token {
     next
 }
 
-#[cfg(test)] 
+#[cfg(test)]
 mod tests {
     use super::*;
 
@@ -1312,7 +1309,7 @@ mod tests {
         let cur = &mut 0;
         expect_next_token(&s, cur, Token::MultiplyEquals);
     }
-    
+
     /* Slash */
 
     #[test]
@@ -1516,21 +1513,21 @@ mod tests {
     #[test]
     fn test_string_literal_0() {
         let s = to_chars("\"\"");
-        let cur = &mut 0; 
+        let cur = &mut 0;
         expect_next_token(&s, cur, Token::StringLiteral(s.as_string()));
     }
 
     #[test]
     fn test_string_literal_1() {
         let s = to_chars("''");
-        let cur = &mut 0; 
+        let cur = &mut 0;
         expect_next_token(&s, cur, Token::StringLiteral(s.as_string()));
     }
 
     #[test]
     fn test_string_literal_2() {
         let s = to_chars("\"test.sol\"");
-        let cur = &mut 0; 
+        let cur = &mut 0;
         expect_next_token(&s, cur, Token::StringLiteral(s.as_string()));
     }
 
@@ -2004,7 +2001,7 @@ mod tests {
         let cur = &mut 0;
         expect_next_token(&s, cur, Token::Public);
     }
-    
+
     #[test]
     fn test_pure() {
         let s = to_chars("pure");
