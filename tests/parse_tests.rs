@@ -398,7 +398,7 @@ mod parse_tests {
                                         boxed_parse_tree(
                                             NonTerminal::Block,
                                             vec![
-                                                lex_4_25::Token::Placeholder.to_boxed_leaf()
+                                                NonTerminal::Identifier(String::from("_")).to_boxed_leaf()
                                             ]
                                         )
                                     ]

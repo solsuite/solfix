@@ -801,14 +801,6 @@ fn parse_statement(input: &Vec<char>, current_ptr: &mut usize) -> ParseTree {
         lex_4_25::Token::For => parse_for_statement(input, current_ptr),
         lex_4_25::Token::Assembly => parse_inline_assembly_statement(input, current_ptr),
         lex_4_25::Token::Do => parse_do_while_statement(input, current_ptr),
-        lex_4_25::Token::Placeholder => {
-            lex_4_25::next_token(input, current_ptr);
-            match lex_4_25::next_token(input, current_ptr) {
-                lex_4_25::Token::Semicolon => (),
-                _ => return lex_4_25::Token::Placeholder.to_invalid().to_leaf()
-            }
-            NonTerminal::Token(lex_4_25::Token::Placeholder).to_leaf()
-        }
         lex_4_25::Token::Emit => parse_emit_statement(input, current_ptr),
         // TODO: This actually should be parse_variable_declaration | parse_expression
         _ => {

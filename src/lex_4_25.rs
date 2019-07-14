@@ -156,7 +156,6 @@ pub enum Token {
     OrEquals,
     Parameter,
     Payable,
-    Placeholder,
     Plus,
     PlusEquals,
     Power,
@@ -681,7 +680,7 @@ fn match_collected(collected: String) -> Token {
         "wei" => Token::Wei,
         "while" => Token::While,
         "years" => Token::Years,
-        "_" => Token::Placeholder,
+        "_" => to_identifier("_"),
         id if id_re.is_match(id) => Token::Identifier(id.to_string()),
         hex if hex_re.is_match(hex) => Token::HexNumber(hex.to_string()),
         num if decimal_re.is_match(num) => Token::DecimalNumber(num.to_string()),
@@ -2160,6 +2159,6 @@ mod tests {
     fn test_placeholder() {
         let s = to_chars("_");
         let cur = &mut 0;
-        expect_next_token(&s, cur, Token::Placeholder);
+        expect_next_token(&s, cur, to_identifier("_"));
     }
 }
