@@ -1,6 +1,8 @@
 use super::lex_4_25;
 use super::parse_4_25;
 
+// TODO(jalextowle): These will probably need to be more granular. It would
+// be great to create a BNF grammar for style rules, if it is possible.
 enum Style {
     /*** Contract ***/
     BeforeContract,
@@ -10,6 +12,20 @@ enum Style {
     AfterContract,
     BeforeContractIdentifier,
     AfterContractIdentifier,
+    AfterContractPartCloseBrace,
+    BeforeContractPartCloseBrace,
+    AfterContractPartOpenBrace,
+    BeforeContractPartOpenBrace,
+    ContractPartOpenBrace,
+    ContractPartCloseBrace,
+    /*** Inheritance ***/
+    AfterInheritanceName,
+    AfterInheritanceNameLast,
+    BeforeInheritanceName,
+    BeforeInheritanceNameLast,
+    AfterIs,
+    BeforeIs,
+    Is,
     /*** Pragma Keyword ***/
     BeforePragma,
     Pragma,
@@ -19,7 +35,56 @@ enum Style {
     AfterPragmaIdentifier,
     /*** Pragma Version ***/
     BeforeVersion,
-    AfterVersion
+    AfterVersion,
+    /*** Struct ***/
+    AfterStruct,
+    AfterStructCloseBrace,
+    AfterStructIdentifier,
+    AfterStructOpenBrace,
+    AfterStructVariableDeclaration,
+    BeforeStruct,
+    BeforeStructCloseBrace,
+    BeforeStructIdentifier,
+    BeforeStructOpenBrace,
+    BeforeStructVariableDeclaration,
+    Struct,
+    StructCloseBrace,
+    StructOpenBrace,
+    StructVariableDeclaration,
+    /*** State Variable ***/
+    AfterStateVariableElementaryType,
+    BeforeStateVariableElementaryType,
+    /*** Mapping ***/
+    Mapping,
+    AfterMapping,
+    BeforeMapping,
+    /*** Modifier ***/
+    AfterModifier,
+    AfterModifierIdentifier,
+    BeforeModifier,
+    BeforeModifierIdentifier,
+    Modifier,
+    /*** User Defined Type Name ***/
+    BeforeUserDefinedTypeName,
+    UserDefinedTypeName,
+    AfterUserDefinedTypeName,
+    /*** Storage ***/
+    Storage,
+    AfterStorage,
+    BeforeStorage,
+    /*** Memory ***/
+    Memory,
+    AfterMemory,
+    BeforeMemory,
+    /*** Variable Declaration ***/
+    AfterVariableDeclarationIdentifier,
+    AfterVariableDeclarationTypeName,
+    BeforeVariableDeclarationIdentifier,
+    BeforeVariableDeclarationTypeName,
+    /*** Operations ***/
+    Dot,
+    /*** Terminators ***/
+    Semicolon,
 }
 
 trait StyleResolver {
@@ -40,10 +105,11 @@ impl StyleResolver for String {
             Style::BeforeIs => self.push_str(" "),
             Style::Is => self.push_str("is"),
             Style::AfterIs => self.push_str("\n"),
+            Style::ContractPartCloseBrace => self.push_str("}"),
 
             Style::BeforeInheritanceName => self.push_str("    "),
             Style::AfterInheritanceName => self.push_str(",\n"),
-            Style::AfterInheritanceNameLast => self.push_str(",\n"),
+            Style::AfterInheritanceNameLast => self.push_str("\n"),
             Style::BeforeContract => self.push_str("\n\n\n"),
             Style::Contract => self.push_str("contract"),
             Style::Interface => self.push_str("interface"),
@@ -58,6 +124,39 @@ impl StyleResolver for String {
             Style::AfterPragma => self.push_str(" "),
             Style::BeforeVersion => (),
             Style::AfterVersion => self.push_str(";"),
+
+            Style::AfterStateVariableElementaryType => self.push_str(" "),
+            Style::BeforeStateVariableElementaryType => self.push_str("\n    "),
+
+            /*** Struct ***/
+            Style::AfterStruct => self.push_str(" "),
+            Style::BeforeStruct => self.push_str("\n    "),
+            Style::Struct => self.push_str("struct"),
+            Style::BeforeStructIdentifier => (),
+            Style::AfterStructIdentifier => self.push_str(" "),
+            Style::BeforeStructOpenBrace => (),
+            Style::StructOpenBrace => self.push_str("{"),
+            Style::AfterStructOpenBrace => self.push_str("\n"),
+            Style::BeforeStructVariableDeclaration => self.push_str("    "),
+            Style::Semicolon => self.push_str(";"),
+            Style::AfterStructVariableDeclaration => self.push_str("\n"),
+            Style::StructCloseBrace => self.push_str("}"),
+
+            Style::AfterVariableDeclarationIdentifier => self.push_str(""),
+            Style::AfterVariableDeclarationTypeName => self.push_str(" "),
+            Style::BeforeVariableDeclarationIdentifier => self.push_str(""),
+            Style::BeforeVariableDeclarationTypeName => self.push_str(""),
+
+            Style::BeforeUserDefinedTypeName => self.push_str(""),
+            Style::AfterUserDefinedTypeName => self.push_str(""),
+
+            /*** Modifier ***/
+            Style::BeforeModifier => self.push_str("\n    "),
+            Style::Modifier => self.push_str("modifier"),
+            Style::AfterModifier => self.push_str(" "),
+
+            /*** Operators ***/
+            Style::Dot => self.push_str("."),
             _ => (),
         }
     }
@@ -77,6 +176,8 @@ pub fn stylize(tree: parse_4_25::ParseTree) -> String {
             _ => panic!("Invalid top level tree")
         }
     }
+    // Add a newline at the end of the file
+    result.push_str("\n");
     result
 }
 
@@ -141,7 +242,7 @@ fn stylize_contract(contract: parse_4_25::ParseNode) -> String {
             _ => panic!("Invalid contract definition")
         }
         match &contract.children[1].node {
-            lex_4_25::Token::OpenBrace => result.push_str(&stylize_contract_part(&contract.children[1])),
+            lex_4_25::Token::OpenBrace => result.push_str(&stylize_contract_part(&contract.children[1], false)),
             _ => panic!("Invalid contract definition")
         }
     } else if contract.children.len() == 3 {
@@ -158,7 +259,7 @@ fn stylize_contract(contract: parse_4_25::ParseNode) -> String {
             _ => panic!("Invalid contract definition")
         }
         match &contract.children[2].node {
-            lex_4_25::Token::OpenBrace => result.push_str(&stylize_contract_part(&contract.children[2])),
+            lex_4_25::Token::OpenBrace => result.push_str(&stylize_contract_part(&contract.children[2], true)),
             _ => panic!("Invalid contract definition")
         }
     }
@@ -181,10 +282,10 @@ fn stylize_inheritance_specifier(block: &parse_4_25::ParseNode) -> String {
         lex_4_25::Token::OpenParenthesis => (),
         _ => panic!("Invalid inheritance specifier")
     }
-    for i in 0..=block.children.len() - 1 {
+    for i in 0..=block.children[0].children.len() - 1 {
         result.resolve(Style::BeforeInheritanceName);
-        result.push_str(&stylize_user_defined_type_name(&block.children[i].children[0]));
-        if i != block.children.len() - 1 {
+        result.push_str(&stylize_user_defined_type_name(&block.children[0].children[i]));
+        if i != block.children[0].children.len() - 1 {
             result.resolve(Style::AfterInheritanceName);
         } else {
             result.resolve(Style::AfterInheritanceNameLast);
@@ -195,8 +296,19 @@ fn stylize_inheritance_specifier(block: &parse_4_25::ParseNode) -> String {
 
 /*** Contract Part ***/
 
-fn stylize_contract_part(block: &parse_4_25::ParseNode) -> String {
+fn stylize_contract_part(block: &parse_4_25::ParseNode, is_preceded_by_inheritance: bool) -> String {
     let mut result = String::new();
+    // Short circuit if the block contains zero children
+    if block.children.len() == 0 {
+        match block.node {
+            lex_4_25::Token::OpenBrace => {
+                result.resolve(Style::ContractPartOpenBrace);
+            }
+            _ => panic!("Invalid contract part")
+        }
+        result.resolve(Style::ContractPartCloseBrace);
+        return result
+    }
     result.resolve(Style::BeforeContractPartOpenBrace);
     match block.node {
         lex_4_25::Token::OpenBrace => {
@@ -204,37 +316,34 @@ fn stylize_contract_part(block: &parse_4_25::ParseNode) -> String {
         }
         _ => panic!("Invalid contract part")
     }
-    if block.children.len() > 0 {
-        result.resolve(Style::AfterContractPartOpenBrace);
-    } else {
-        result.resolve(Style::ContractPartCloseBrace);
-        return result
-    }
-    for child in &block.children {
-        match child.node {
-            lex_4_25::Token::Enum => result.push_str(&stylize_enum_definition(&child)),
-            lex_4_25::Token::Event => result.push_str(&stylize_event_declaration(&child)),
-            lex_4_25::Token::Function => result.push_str(&stylize_function_definition(&child)),
-            lex_4_25::Token::Modifier => result.push_str(&stylize_modifier_definition(&child)),
-            lex_4_25::Token::Using => result.push_str(&stylize_using_for_declaration(&child)),
-            lex_4_25::Token::Struct => result.push_str(&stylize_struct_definition(&child)),
-            lex_4_25::Token::StateVariable => result.push_str(&stylize_state_variable_declaration(&child)),
+    result.resolve(Style::AfterContractPartOpenBrace);
+    for i in 0..=block.children.len() - 1 {
+        let after_inheritance = i == 0 && is_preceded_by_inheritance;
+        match &block.children[i].node {
+            lex_4_25::Token::Enum => result.push_str(&stylize_enum_definition(&block.children[i], is_preceded_by_inheritance)),
+            lex_4_25::Token::Event => result.push_str(&stylize_event_declaration(&block.children[i], is_preceded_by_inheritance)),
+            lex_4_25::Token::Function => result.push_str(&stylize_function_definition(&block.children[i], is_preceded_by_inheritance)),
+            lex_4_25::Token::Modifier => result.push_str(&stylize_modifier_definition(&block.children[i], is_preceded_by_inheritance)),
+            lex_4_25::Token::Using => result.push_str(&stylize_using_for_declaration(&block.children[i], is_preceded_by_inheritance)),
+            lex_4_25::Token::Struct => result.push_str(&stylize_struct_definition(&block.children[i], is_preceded_by_inheritance)),
+            lex_4_25::Token::StateVariable => result.push_str(&stylize_state_variable_declaration(&block.children[i], is_preceded_by_inheritance)),
             _ => panic!("Invalid contract part")
         }
     }
+    result.push_str("\n");
     result.resolve(Style::ContractPartCloseBrace);
-    result.push_str("}");
     result
 }
 
 /*** Sub-contract Structures ***/
 
-fn stylize_state_variable_declaration(node: &parse_4_25::ParseNode) -> String {
+fn stylize_state_variable_declaration(node: &parse_4_25::ParseNode, is_preceded_by_inheritance: bool) -> String {
     let mut result = String::new();
-    if node.children.len() < 2 {
-        panic!("Invalid state variable");
+    if is_preceded_by_inheritance {
+        result.push_str("\n    ");
+    } else {
+        result.push_str("\n\n    ");
     }
-    result.resolve(Style::BeforeStateVariableElementaryType);
     result.push_str(&stylize_elementary_type(&node.children[0]));
     result.resolve(Style::AfterStateVariableElementaryType);
     let mut i = 1;
@@ -258,7 +367,7 @@ fn stylize_state_variable_declaration(node: &parse_4_25::ParseNode) -> String {
     }
     i += 1;
     if i == node.children.len() {
-        result.push_str(";\n");
+        result.push_str(";");
         return result;
     } else {
         result.push(' ');
@@ -267,7 +376,7 @@ fn stylize_state_variable_declaration(node: &parse_4_25::ParseNode) -> String {
                 result.push_str("=");
                 result.push_str(" ");
                 result.push_str(&stylize_expression(&node.children[i].children[0]));
-                result.push_str(";\n");
+                result.push_str(";");
             }
             _ => panic!("Invalid state variable")
         }
@@ -275,7 +384,7 @@ fn stylize_state_variable_declaration(node: &parse_4_25::ParseNode) -> String {
     result
 }
 
-fn stylize_enum_definition(node: &parse_4_25::ParseNode) -> String {
+fn stylize_enum_definition(node: &parse_4_25::ParseNode, is_preceded_by_inheritance: bool) -> String {
     let mut result = String::new();
     match node.node {
         lex_4_25::Token::Enum => result.push_str("enum"),
@@ -312,9 +421,8 @@ fn stylize_enum_definition(node: &parse_4_25::ParseNode) -> String {
     result
 }
 
-fn stylize_event_declaration(node: &parse_4_25::ParseNode) -> String {
+fn stylize_event_declaration(node: &parse_4_25::ParseNode, is_preceded_by_inheritance: bool) -> String {
     let mut result = String::new();
-    result.push_str("    ");
     match node.node {
         lex_4_25::Token::Event => result.push_str("event"),
         _ => panic!("Invalid event definition")
@@ -331,7 +439,7 @@ fn stylize_event_declaration(node: &parse_4_25::ParseNode) -> String {
     if node.children[1].children.len() > 0 {
         for i in 0..=node.children[1].children.len() - 1 {
             result.push('\n');
-            result.push_str("        ");
+            result.push_str("    ");
             result.push_str(&stylize_event_parameter(&node.children[1].children[i]));
             if i != node.children[1].children.len() - 1 {
                 result.push(',');
@@ -340,9 +448,9 @@ fn stylize_event_declaration(node: &parse_4_25::ParseNode) -> String {
             }
         }
     }
-    result.push_str("    ");
+    result.push_str("");
     result.push(')');
-    result.push_str(";\n");
+    result.push_str(";");
     result
 }
 
@@ -374,7 +482,7 @@ fn stylize_event_parameter(node: &parse_4_25::ParseNode) -> String {
     result
 }
 
-fn stylize_function_definition(node: &parse_4_25::ParseNode) -> String {
+fn stylize_function_definition(node: &parse_4_25::ParseNode, is_preceded_by_inheritance: bool) -> String {
     let mut result = String::new();
     match node.node {
         lex_4_25::Token::Function => result.push_str("function"),
@@ -481,9 +589,11 @@ fn stylize_block(block: &parse_4_25::ParseNode) -> String {
     if block.children.len() == 0 {
         result.push_str("}");
     } else {
+        result.push_str("\n");
         for child in &block.children {
             result.push_str(&stylize_statement(&child));
         }
+        result.push_str("\n    }");
     }
     result
 }
@@ -495,11 +605,13 @@ fn stylize_statement(statement: &parse_4_25::ParseNode) -> String {
         lex_4_25::Token::For => stylize_for_statement(statement),
         lex_4_25::Token::Assembly => stylize_inline_assembly_statement(statement),
         lex_4_25::Token::Do => stylize_do_while_statement(statement),
-        lex_4_25::Token::Placeholder => String::from("\n\n_;"),
+        lex_4_25::Token::Placeholder => String::from("\n        _;"),
         lex_4_25::Token::Emit => stylize_emit_statement(statement),
         // TODO: This actually should be parse_variable_declaration | parse_expression
         _ => {
-            let mut result = stylize_expression(statement);
+            let mut result = String::from("");
+            result.push_str("        ");
+            result.push_str(&stylize_expression(statement));
             match statement.node {
                 lex_4_25::Token::NoMatch => panic!("Invalid statement"),
                 _ => ()
@@ -554,11 +666,16 @@ fn stylize_parameter(node: &parse_4_25::ParseNode) -> String {
     result
 }
 
-fn stylize_modifier_definition(node: &parse_4_25::ParseNode) -> String {
+// TODO(jalextowle): Replace style with resolve pattern
+fn stylize_modifier_definition(node: &parse_4_25::ParseNode, is_preceded_by_inheritance: bool) -> String {
     let mut result = String::new();
+    if is_preceded_by_inheritance {
+        result.push_str("\n    ");
+    } else {
+        result.push_str("\n\n    ");
+    }
     match node.node {
         lex_4_25::Token::Modifier => {
-            result.resolve(Style::BeforeModifier);
             result.resolve(Style::Modifier);
             result.resolve(Style::AfterModifier);
         }
@@ -567,9 +684,8 @@ fn stylize_modifier_definition(node: &parse_4_25::ParseNode) -> String {
     if node.children.len() == 2 {
         match &node.children[0].node {
             lex_4_25::Token::Identifier(name) => {
-                result.resolve(Style::BeforeModifierIdentifier);
                 result.push_str(&name);
-                result.resolve(Style::AfterModifierIdentifier);
+                result.push_str(" ");
             }
             _ => panic!("Invalid modifier definition")
         }
@@ -577,9 +693,8 @@ fn stylize_modifier_definition(node: &parse_4_25::ParseNode) -> String {
     } else if node.children.len() == 3 {
         match &node.children[0].node {
             lex_4_25::Token::Identifier(name) => {
-                result.resolve(Style::BeforeModifierIdentifier);
                 result.push_str(&name);
-                result.resolve(Style::AfterModifierIdentifier);
+                result.push_str(" ");
             }
             _ => panic!("Invalid modifier definition")
         }
@@ -599,16 +714,15 @@ fn stylize_modifier_definition(node: &parse_4_25::ParseNode) -> String {
     } else {
         panic!("Invalid modifier definition");
     }
-    result.push_str("\n");
     result
 }
 
-fn stylize_using_for_declaration(node: &parse_4_25::ParseNode) -> String {
+fn stylize_using_for_declaration(node: &parse_4_25::ParseNode, is_preceded_by_inheritance: bool) -> String {
     let mut result = String::new();
     result
 }
 
-fn stylize_struct_definition(node: &parse_4_25::ParseNode) -> String {
+fn stylize_struct_definition(node: &parse_4_25::ParseNode, is_preceded_by_inheritance: bool) -> String {
     let mut result = String::new();
     match node.node {
         lex_4_25::Token::Struct => {
@@ -620,17 +734,17 @@ fn stylize_struct_definition(node: &parse_4_25::ParseNode) -> String {
     }
     match &node.children[0].node {
         lex_4_25::Token::Identifier(name) => {
-            result.resolve(BeforeStructIdentifier);
+            result.resolve(Style::BeforeStructIdentifier);
             result.push_str(&name);
-            result.resolve(AfterStructIdentifier);
+            result.resolve(Style::AfterStructIdentifier);
         }
         _ => panic!("Invalid struct definition")
     }
     match &node.children[1].node {
         lex_4_25::Token::OpenBrace => {
-            result.resolve(BeforeStructOpenBrace);
-            result.resolve(StructOpenBrace);
-            result.resolve(AfterStructOpenBrace);
+            result.resolve(Style::BeforeStructOpenBrace);
+            result.resolve(Style::StructOpenBrace);
+            result.resolve(Style::AfterStructOpenBrace);
         }
         _ => panic!("Invalid struct definition")
     }
@@ -866,12 +980,42 @@ fn stylize_elementary_type(elementary_type: &parse_4_25::ParseNode) -> String {
 
 fn stylize_expression(expression: &parse_4_25::ParseNode) -> String {
     let mut result = String::new();
-    // TODO: This needs to be expanded on significantly
-    match expression.node {
-        // This should do a lookahead parse to check more of an expression
+    match &expression.node {
+        // TODO(jalextowle): Switch this to resolve instead
+        lex_4_25::Token::Equals => {
+            result.push_str(&stylize_expression(&*expression.children[0]));
+            result.push_str(" == ");
+            result.push_str(&stylize_expression(&*expression.children[1]));
+        }
+        lex_4_25::Token::Plus => {
+            result.push_str(&stylize_expression(&*expression.children[0]));
+            result.push_str(" + ");
+            result.push_str(&stylize_expression(&*expression.children[1]));
+        }
+        lex_4_25::Token::OpenParenthesis => {
+            result.push_str(&stylize_expression(&*expression.children[0]));
+            result.push_str("(");
+            result.push_str(&stylize_function_call_arguments(&*expression.children[1]));
+            result.push_str(")");
+        }
+        lex_4_25::Token::Dot => {
+            result.push_str(&stylize_expression(&*expression.children[0]));
+            result.push_str(".");
+            result.push_str(&stylize_expression(&*expression.children[1]));
+        }
+        lex_4_25::Token::Identifier(ref name) => result.push_str(name),
         lex_4_25::Token::DecimalNumber(ref number) => result.push_str(number),
         lex_4_25::Token::HexNumber(ref number) => result.push_str(number),
-        _ => panic!("Invalid expression")
+        // TODO: Change Me!
+        actual => panic!("Invalid expression {:#?}", actual)
+    }
+    result
+}
+
+fn stylize_function_call_arguments(arguments: &parse_4_25::ParseNode) -> String {
+    let mut result = String::new();
+    for i in 0..=arguments.children.len() - 1 {
+        result.push_str(&stylize_expression(&*arguments.children[i]));
     }
     result
 }
@@ -896,7 +1040,7 @@ mod tests {
             ]
         };
         let actual_stylized = stylize(tree);
-        let expected_stylized = "pragma solidity 0.4.25;";
+        let expected_stylized = "pragma solidity 0.4.25;\n";
         assert_eq!(expected_stylized, actual_stylized);
     }
 
@@ -919,8 +1063,8 @@ mod tests {
             ]
         };
         let actual_stylized = stylize_inheritance_specifier(&node);
-        let expected_stylized = "is\n    A\n";
-        assert_eq!(actual_stylized, expected_stylized);
+        let expected_stylized = " is\n    A\n";
+        assert_eq!(expected_stylized, actual_stylized);
     }
 
     #[test]
@@ -949,7 +1093,7 @@ mod tests {
             ]
         };
         let actual_stylized = stylize_inheritance_specifier(&node);
-        let expected_stylized = "is\n    A,\n    Bat.Car\n";
+        let expected_stylized = " is\n    A,\n    Bat.Car\n";
         assert_eq!(actual_stylized, expected_stylized);
     }
 
@@ -987,8 +1131,8 @@ mod tests {
             ]
         };
         let actual_stylized = stylize_inheritance_specifier(&node);
-        let expected_stylized = "is\n    A,\n    Bat.Car,\n    foo.bar.baz\n";
-        assert_eq!(actual_stylized, expected_stylized);
+        let expected_stylized = " is\n    A,\n    Bat.Car,\n    foo.bar.baz\n";
+        assert_eq!(expected_stylized, actual_stylized);
     }
 
     #[test]
@@ -1000,8 +1144,8 @@ mod tests {
                 Box::new(lex_4_25::Token::Identifier("nothing".to_string()).to_leaf()),
             ]
         };
-        let actual_stylized = stylize_state_variable_declaration(&node);
-        let expected_stylized = String::from("\n    uint256 nothing;");
+        let actual_stylized = stylize_state_variable_declaration(&node, false);
+        let expected_stylized = String::from("\n\n    uint256 nothing;");
         assert_eq!(expected_stylized, actual_stylized);
     }
 
@@ -1020,8 +1164,8 @@ mod tests {
                 })
             ]
         };
-        let actual_stylized = stylize_state_variable_declaration(&node);
-        let expected_stylized = String::from("\n    uint256 total_supply = 10;");
+        let actual_stylized = stylize_state_variable_declaration(&node, false);
+        let expected_stylized = String::from("\n\n    uint256 total_supply = 10;");
         assert_eq!(expected_stylized, actual_stylized);
     }
 
@@ -1034,7 +1178,7 @@ mod tests {
                 Box::new(lex_4_25::Token::OpenBrace.to_leaf())
             ]
         };
-        let actual_stylized = stylize_enum_definition(&node);
+        let actual_stylized = stylize_enum_definition(&node, false);
         let expected_stylized = String::from("enum empty {}");
         assert_eq!(expected_stylized, actual_stylized);
     }
@@ -1055,7 +1199,7 @@ mod tests {
                 })
             ]
         };
-        let actual_stylized = stylize_enum_definition(&node);
+        let actual_stylized = stylize_enum_definition(&node, false);
         let expected_stylized = String::from("enum Letters {\n    A,\n    B,\n    C\n}");
         assert_eq!(expected_stylized, actual_stylized);
     }
@@ -1069,7 +1213,7 @@ mod tests {
                 Box::new(lex_4_25::Token::OpenParenthesis.to_leaf())
             ]
         };
-        let actual_stylized = stylize_event_declaration(&node);
+        let actual_stylized = stylize_event_declaration(&node, false);
         let expected_stylized = "event empty();";
     }
 
@@ -1110,7 +1254,7 @@ mod tests {
                 })
             ]
         };
-        let actual_stylized = stylize_event_declaration(&node);
+        let actual_stylized = stylize_event_declaration(&node, false);
         let expected_stylized = "event Transfer(\n    address indexed owner,\n    address indexed recipient,\n    uint256 indexed value\n);";
         assert_eq!(expected_stylized, actual_stylized);
     }
@@ -1135,8 +1279,8 @@ mod tests {
                 })
             ]
         };
-        let actual_stylized = stylize_struct_definition(&node);
-        let expected_stylized = "struct Value {\n    uint256 value;\n}";
+        let actual_stylized = stylize_struct_definition(&node, false);
+        let expected_stylized = "\n    struct Value {\n    uint256 value;\n}";
         assert_eq!(expected_stylized, actual_stylized);
     }
 

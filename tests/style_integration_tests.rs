@@ -8,7 +8,7 @@ mod style_integration_tests {
     use std::fs;
 
     #[test]
-    fn empty_style_test() { 
+    fn empty_style_test() {
         let input = fs::read_to_string("./contracts/BadEmpty.sol")
             .expect("Test file not found: ./contracts/BadEmpty.sol");
         let expected = fs::read_to_string("./contracts/Empty.sol")
@@ -18,7 +18,7 @@ mod style_integration_tests {
     }
 
     #[test]
-    fn value_style_test() { 
+    fn value_style_test() {
         let input = fs::read_to_string("./contracts/BadValue.sol")
             .expect("Test file not found: ./contracts/BadValue.sol");
         let expected = fs::read_to_string("./contracts/Value.sol")
@@ -28,7 +28,7 @@ mod style_integration_tests {
     }
 
     #[test]
-    fn ownable_style_test() { 
+    fn ownable_style_test() {
         let input = fs::read_to_string("./contracts/BadOwnable.sol")
             .expect("Test file not found: ./contracts/BadOwnable.sol");
         let expected = fs::read_to_string("./contracts/Ownable.sol")
