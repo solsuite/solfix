@@ -77,7 +77,7 @@ pub fn stylize(tree: parse_4_25::ParseTree) -> String {
             _ => panic!("Invalid top level tree")
         }
     }
-    result    
+    result
 }
 
 /*** Pragma ***/
@@ -121,7 +121,7 @@ fn stylize_import(import: parse_4_25::ParseNode) -> String { String::new() }
 
 /*** Contract ***/
 
-fn stylize_contract(contract: parse_4_25::ParseNode) -> String { 
+fn stylize_contract(contract: parse_4_25::ParseNode) -> String {
     let mut result = String::new();
     result.resolve(Style::BeforeContract);
     match contract.node {
@@ -223,6 +223,7 @@ fn stylize_contract_part(block: &parse_4_25::ParseNode) -> String {
         }
     }
     result.resolve(Style::ContractPartCloseBrace);
+    result.push_str("}");
     result
 }
 
@@ -274,7 +275,7 @@ fn stylize_state_variable_declaration(node: &parse_4_25::ParseNode) -> String {
     result
 }
 
-fn stylize_enum_definition(node: &parse_4_25::ParseNode) -> String { 
+fn stylize_enum_definition(node: &parse_4_25::ParseNode) -> String {
     let mut result = String::new();
     match node.node {
         lex_4_25::Token::Enum => result.push_str("enum"),
@@ -311,7 +312,7 @@ fn stylize_enum_definition(node: &parse_4_25::ParseNode) -> String {
     result
 }
 
-fn stylize_event_declaration(node: &parse_4_25::ParseNode) -> String { 
+fn stylize_event_declaration(node: &parse_4_25::ParseNode) -> String {
     let mut result = String::new();
     result.push_str("    ");
     match node.node {
@@ -345,7 +346,7 @@ fn stylize_event_declaration(node: &parse_4_25::ParseNode) -> String {
     result
 }
 
-fn stylize_event_parameter(node: &parse_4_25::ParseNode) -> String { 
+fn stylize_event_parameter(node: &parse_4_25::ParseNode) -> String {
     let mut result = String::new();
     match node.node {
         lex_4_25::Token::EventParameter => (),
@@ -400,7 +401,7 @@ fn stylize_function_definition(node: &parse_4_25::ParseNode) -> String {
     }
     result.push_str("        )\n");
     if node.children.len() >= 3 {
-        for i in 2..=node.children.len() - 1 { 
+        for i in 2..=node.children.len() - 1 {
             result.push_str("            \n");
             match &node.children[i].node {
                 lex_4_25::Token::External => {
@@ -409,11 +410,11 @@ fn stylize_function_definition(node: &parse_4_25::ParseNode) -> String {
                 }
                 lex_4_25::Token::Internal => {
                     result.push_str("            \n");
-                    result.push_str("internal"); 
+                    result.push_str("internal");
                 }
                 lex_4_25::Token::Pure => {
                     result.push_str("            \n");
-                    result.push_str("pure"); 
+                    result.push_str("pure");
                 }
                 lex_4_25::Token::Constant => {
                     result.push_str("            \n");
@@ -471,7 +472,7 @@ fn stylize_function_definition(node: &parse_4_25::ParseNode) -> String {
     result
 }
 
-fn stylize_block(block: &parse_4_25::ParseNode) -> String { 
+fn stylize_block(block: &parse_4_25::ParseNode) -> String {
     let mut result = String::new();
     match block.node {
         lex_4_25::Token::OpenBrace => result.push_str("{"),
@@ -487,7 +488,7 @@ fn stylize_block(block: &parse_4_25::ParseNode) -> String {
     result
 }
 
-fn stylize_statement(statement: &parse_4_25::ParseNode) -> String { 
+fn stylize_statement(statement: &parse_4_25::ParseNode) -> String {
     return match statement.node {
         lex_4_25::Token::If => stylize_if_statement(statement),
         lex_4_25::Token::While => stylize_while_statement(statement),
@@ -650,7 +651,7 @@ fn stylize_variable_declaration(node: &parse_4_25::ParseNode) -> String {
         _ => panic!("Invalid variable declaration")
     }
     result.resolve(Style::BeforeVariableDeclarationTypeName);
-    result.push_str(&stylize_type_name(&node.children[0])); 
+    result.push_str(&stylize_type_name(&node.children[0]));
     result.resolve(Style::AfterVariableDeclarationTypeName);
     if node.children.len() == 2 {
         match &node.children[1].node {
@@ -691,7 +692,7 @@ fn stylize_variable_declaration(node: &parse_4_25::ParseNode) -> String {
 
 /*** Types ***/
 
-fn stylize_type_name(type_name: &parse_4_25::ParseNode) -> String { 
+fn stylize_type_name(type_name: &parse_4_25::ParseNode) -> String {
     return match type_name.node {
         lex_4_25::Token::Identifier(..) => stylize_user_defined_type_name(type_name),
         lex_4_25::Token::Function => stylize_function_type(type_name),
@@ -863,7 +864,7 @@ fn stylize_elementary_type(elementary_type: &parse_4_25::ParseNode) -> String {
 
 /*** Sub-sub-statements ***/
 
-fn stylize_expression(expression: &parse_4_25::ParseNode) -> String { 
+fn stylize_expression(expression: &parse_4_25::ParseNode) -> String {
     let mut result = String::new();
     // TODO: This needs to be expanded on significantly
     match expression.node {
@@ -878,7 +879,7 @@ fn stylize_expression(expression: &parse_4_25::ParseNode) -> String {
 /*** Testing ***/
 
 #[cfg(test)]
-mod tests { 
+mod tests {
     use super::*;
 
     #[test]
@@ -1011,7 +1012,7 @@ mod tests {
             children: vec![
                 Box::new(lex_4_25::Token::Uint256.to_leaf()),
                 Box::new(lex_4_25::Token::Identifier("total_supply".to_string()).to_leaf()),
-                Box::new(parse_4_25::ParseNode{ 
+                Box::new(parse_4_25::ParseNode{
                     node: lex_4_25::Token::Assignment,
                     children: vec![
                         Box::new(lex_4_25::Token::DecimalNumber("10".to_string()).to_leaf())
@@ -1141,7 +1142,7 @@ mod tests {
 
     #[test]
     fn stylize_block_test1() {
-        let node = parse_4_25::ParseNode { 
+        let node = parse_4_25::ParseNode {
             node: lex_4_25::Token::OpenBrace,
             children: vec![]
         };
